@@ -13,7 +13,7 @@ import logging
 
 from pytorch_utils import TrainingManager, get_runs_params
 
-from emnist_model import EMNISTNet
+from models import EMNISTNet, EMNISTNet_v2, EMNISTNet_v3, EMNISTNet_v4
 
 torch.set_printoptions(linewidth=120)
 torch.set_grad_enabled(True)
@@ -33,12 +33,15 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Usage: python train_model.py --m=emnist_model.pt --d=custom_dataset/ --e=1 --cuda --v')
+    parser = argparse.ArgumentParser(description='Usage: python train_model.py --m=emnist_model.pt --d=custom_dataset/ --e=1 --cuda --v --o=emnist')
     parser.add_argument('--m', help='Path to a previous model to start with')
     parser.add_argument('--e', help='Number of epochs to train the model')
     parser.add_argument('--cuda', type=str2bool, nargs='?', const=True, default=True, help='use CUDA if available')
     parser.add_argument('--v', type=str2bool, nargs='?', const=True, default=False, help='verbose and debug msgs')
     parser.add_argument('--d', help='Path to the custom dataset')
+    parser.add_argument('--o', help='Output filename')
+    parser.add_argument('--n', help='net model to use')
+    parser.add_argument('--b', type=int, nargs='?', const=1000, default=500, help='batch size')
     args = parser.parse_args()
     
     if args.v:
@@ -72,7 +75,7 @@ if __name__ == '__main__':
     # TODO: put run params in a config file or just remove multiple runs support?
     params = OrderedDict(
         lr = [0.01],
-        batch_size = [600],
+        batch_size = [args.b],
         shuffle = [True]
     )
 
@@ -89,8 +92,21 @@ if __name__ == '__main__':
     for run in get_runs_params(params):
         logging.info(f'Training model with the following parameters:\nlr: {run.lr}\nbatch_size: {run.batch_size}\nshuffle: {run.shuffle}')
         
-        net = EMNISTNet(num_classes=num_classes)
-        
+        if args.n is not None:
+            if args.n == 1:
+                net = EMNISTNet(num_classes=num_classes)
+            elif args.n == 2:
+                net = EMNISTNet_v2(num_classes=num_classes)
+            elif args.n == 3:
+                net = EMNISTNet_v3(num_classes=num_classes)
+            elif args.n == 4:
+                net = EMNISTNet_v4(num_classes=num_classes)
+            else:
+                net = EMNISTNet(num_classes=num_classes)
+        else:
+            net = EMNISTNet(num_classes=num_classes)
+
+
         if args.m is not None:
             logging.debug(f'Loading pre-trained model: {args.m}')
             net.load_state_dict(torch.load(args.m))
@@ -123,4 +139,5 @@ if __name__ == '__main__':
 
         train_manager.end_run()
 
-    train_manager.save('result')
+    if args.o is not None:
+        train_manager.save(filename=args.o)
