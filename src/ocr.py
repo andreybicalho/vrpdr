@@ -2,14 +2,14 @@ import torch
 import logging
 import numpy as np
 
-from EMNISTNet.emnist_model import EMNISTNet
+from EMNISTNet.models import EMNISTNet
 
 class OCR():
     """
     Optical Character Recognition (OCR) aims to recognize characters from images.
     """
 
-    def __init__(self, model_filename="config/emnist_model.pt", use_cuda=False, debug=False):
+    def __init__(self, model_filename="config/emnist_model.pt", num_classes=47, use_cuda=False, debug=False):
 
         if(debug):
             logging.getLogger().setLevel(logging.DEBUG)
@@ -17,15 +17,15 @@ class OCR():
             logging.getLogger().setLevel(logging.INFO)
 
         self._debug = debug
-        # emnist bymerge indexed classes labels
-        self._groundtruth = ['0','1','2','3','4','5','6','7','8','9',
-                             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-                             'a','b','d','e','f','g','h','n','q','r','t']
+        # indexed classes labels
+        self._groundtruth = ['0','1','2','3','4','5','6','7','8','9', # 10 classes (MNIST)
+                             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z', # 36 classes (custom dataset)
+                             'a','b','d','e','f','g','h','n','q','r','t'] # 47 classes (EMNIST bymerge)
 
         self._device = torch.device("cuda:0" if torch.cuda.is_available() and use_cuda else "cpu")
         logging.info(f'Using {self._device} device for predictions.')
 
-        self._model = EMNISTNet(num_classes=47)
+        self._model = EMNISTNet(num_classes=num_classes)
         self._model.load_state_dict(torch.load(model_filename, map_location=self._device))
 
     def predict(self, inputs):

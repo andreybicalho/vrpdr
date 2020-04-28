@@ -14,3 +14,6 @@ wincertstore==0.2
 Flask==1.1.1
 imutils==0.5.3
 scikit-image==0.16.2
+tensorboard==1.14.0
+torch==1.4.0+cpu 
+torchvision==0.5.0+cpu

@@ -46,7 +46,7 @@ def run_lpr():
 
             roi_imgs = yolo.detect(inputImage)
 
-            ocr = OCR(model_filename="../config/emnist_model.pt", use_cuda=False, debug=DEBUG)
+            ocr = OCR(model_filename="../config/emnist_net_custom.pt", num_classes=36, use_cuda=False, debug=DEBUG)
 
             index = 0
             for roi_img in roi_imgs:
