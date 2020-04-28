@@ -63,6 +63,8 @@ class TrainingManager():
         # FIXME(andrey): adding model to tensorboard is crashing when model is running on GPU
         #self.tb.add_graph(self.model, images)
 
+        logging.info(f'Start training for run #{self.run_count}:\nlr: {run.lr}\nbatch_size: {run.batch_size}\nshuffle: {run.shuffle}')
+
     def end_run(self):
         self.tb.close()
         self.epoch_count = 0

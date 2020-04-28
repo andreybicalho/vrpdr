@@ -27,9 +27,11 @@ def display_images(img_list, row, col):
 train_data = torchvision.datasets.ImageFolder(root='custom_dataset/', 
                 transform=transforms.Compose([
                     transforms.Grayscale(num_output_channels=1),
+                    transforms.RandomApply([transforms.RandomAffine(degrees=(-30, 30), shear=(-30, 30))], p=1.0),
                     transforms.ToTensor()
                 ])
             )
+print(f'dataset size: {len(train_data)}')
 
 NUM_IMAGES = 36
 
@@ -41,6 +43,7 @@ batch = next(iter(data_loader))
 print(f'batch len: {len(batch)}')
 print(f'type: {type(batch)}')
 images, labels = batch
+print(f'batch size: {len(images)}')
 print(f'images shape: {images.shape}')
 print(f'labels shape: {labels.shape}')
 print(f'labels: {labels}')
