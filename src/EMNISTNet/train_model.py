@@ -86,12 +86,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Usage: python train_model.py --m=emnist_model.pt --d=custom_dataset/ --e=1 --cuda --v --o=emnist_model')
     parser.add_argument('--m', help='Path to a previous model to start with')
     parser.add_argument('--e', type=int, nargs='?', const=1, default=1, help='Number of epochs to train the model')
-    parser.add_argument('--cuda', type=str2bool, nargs='?', const=True, default=True, help='use CUDA if available')
-    parser.add_argument('--v', type=str2bool, nargs='?', const=True, default=False, help='verbose and debug msgs')
+    parser.add_argument('--cuda', type=str2bool, nargs='?', const=False, default=False, help='use CUDA if available')
+    parser.add_argument('--v', type=str2bool, nargs='?', const=False, default=False, help='verbose and debug msgs')
     parser.add_argument('--d', help='Path to the custom dataset')
     parser.add_argument('--o', help='Output filename')
     parser.add_argument('--n', type=int, nargs='?', const=1, default=1, help='net model to use')
-    parser.add_argument('--b', type=int, nargs='?', const=1000, default=500, help='batch size')
+    parser.add_argument('--b', type=int, nargs='?', const=500, default=500, help='batch size')
     args = parser.parse_args()
     
     if args.v:
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         net = load_net(args.n, args.m)
         net.to(device)
 
-        data_loader = DataLoader(train_set, batch_size=run.batch_size)
+        data_loader = DataLoader(train_set, batch_size=run.batch_size, shuffle=run.shuffle)
         optimizer = optim.Adam(net.parameters(), lr=run.lr)
 
         train_manager.begin_run(run, net, data_loader)
