@@ -8,10 +8,13 @@ data/*
 config/*
 */runs/*
 */EMNISTNet/data/*
+*/EMNISTNet/custom_dataset/*
+*/EMNISTNet/mini_custom_dataset/*
 runs/
-*.jpg
-*.JPG
-*.jpeg
+debug/*
+#*.jpg
+#*.JPG
+#*.jpeg
 *.png
 *.bmp
 *.tfrecord
