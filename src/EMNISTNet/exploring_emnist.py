@@ -30,11 +30,16 @@ train_data = torchvision.datasets.EMNIST(
         train = True,
         download = True,
         transform=transforms.Compose([
-            transforms.ToTensor()
+            #transforms.RandomApply([transforms.RandomAffine(degrees=(-30, 30), shear=(-30, 30)), 
+                #transforms.Pad(padding=1, fill=0, padding_mode='constant')], p=1.0),
+                #transforms.RandomHorizontalFlip(p=1.0),
+                #transforms.RandomVerticalFlip(p=1.0),
+                #transforms.RandomPerspective(p=1.0),
+                transforms.ToTensor()
             ])
     )
 
-NUM_IMAGES = 10
+NUM_IMAGES = 20
 
 groundtruth = ['0','1','2','3','4','5','6','7','8','9',
               'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
@@ -63,4 +68,4 @@ print(f'groundtruth classes: {groundtruth_classes_name}')
 
 # plotting images
 images = [ images[idx][0].numpy() for idx in range(NUM_IMAGES)]
-display_images(images, 2, 5)
+display_images(images, 1, NUM_IMAGES)

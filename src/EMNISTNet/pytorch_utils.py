@@ -63,6 +63,8 @@ class TrainingManager():
         # FIXME(andrey): adding model to tensorboard is crashing when model is running on GPU
         #self.tb.add_graph(self.model, images)
 
+        logging.info(f'Start training for run #{self.run_count}:\nlr: {run.lr}\nbatch_size: {run.batch_size}\nshuffle: {run.shuffle}')
+
     def end_run(self):
         self.tb.close()
         self.epoch_count = 0
@@ -76,7 +78,7 @@ class TrainingManager():
 
         logging.info(f'Starting epoch: {self.epoch_count}')
 
-    def end_epoch(self):
+    def end_epoch(self, save_model=False):
         epoch_duration = time.time() - self.epoch_start_time
         run_duration = time.time() - self.run_start_time
 
@@ -104,7 +106,8 @@ class TrainingManager():
 
         df = pd.DataFrame.from_dict(self.run_data, orient='columns')
 
-        torch.save(self.model.state_dict(), f'{self.run_count}_{self.epoch_count}_model.pt')
+        if save_model:
+            torch.save(self.model.state_dict(), f'{self.run_count}_{self.epoch_count}_model.pt')
 
     def track_loss(self, loss):
         self.epoch_loss += loss.item() * self.loader.batch_size
@@ -112,18 +115,19 @@ class TrainingManager():
     def track_num_corret(self, preds, labels):
         self.epoch_num_correct += self._get_num_correct(preds, labels)    
 
-    def save(self, filename):
+    def save(self, filename, save_training_report=False):
         """
             Save results and model.
         """
-        # save csv
-        pd.DataFrame.from_dict(
-            self.run_data,
-            orient='columns'
-        ).to_csv(f'{filename}.csv')
+        if save_training_report:
+            # save csv
+            pd.DataFrame.from_dict(
+                self.run_data,
+                orient='columns'
+            ).to_csv(f'{filename}.csv')
 
-        # save json
-        with open(f'{filename}.json', 'w', encoding='utf-8') as f:
-            json.dump(self.run_data, f, ensure_ascii=False, indent=4)
+            # save json
+            with open(f'{filename}.json', 'w', encoding='utf-8') as f:
+                json.dump(self.run_data, f, ensure_ascii=False, indent=4)
 
-        torch.save(self.model.state_dict(), f'{filename}_model.pt')
+        torch.save(self.model.state_dict(), f'{filename}.pt')
