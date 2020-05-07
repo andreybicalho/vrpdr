@@ -84,7 +84,7 @@ def run_lpr():
     return response
 
 def predict(input_image, roi_img, bounding_box, prefix_label, background_color, emnist_net):
-    img, characteres = extract_chars(roi_img, prefix_label=prefix_label, min_countours_area_ration=0.01, debug=True)
+    img, characteres = extract_chars(roi_img, prefix_label=prefix_label, min_countours_area_ratio=0.01, debug=True)
     
     emnist_net_preds = emnist_net.predict(characteres)
 

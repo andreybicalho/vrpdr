@@ -1,5 +1,7 @@
 # Deep Learning Applied To Vehicle Registration Plate Detection and Recognition
 
+[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
+
 # What's this repo about?
 
 This is a simple approach for vehicle registration plate detection and recognition. [*YOLO*](https://github.com/pjreddie/darknet) object detection algorithm was used for license plate region detections, then an image processing pipeline was performed to extract character digits. After that, a Convolutional Neural Network (CNN) - *EMNISTNet* - and the "vanilla" [*Tesseract-OCR*](https://github.com/tesseract-ocr/tesseract) Optical Character Recognition (OCR) were used to recognize the extracted digits.

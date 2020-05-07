@@ -110,14 +110,13 @@ def draw_bounding_box(image, text_label, startPoint_x, startPoint_y, endPoint_x,
         cv.rectangle(image, (startPoint_x, top - round(1.5*labelSize[1])), (startPoint_x + round(1.5*labelSize[0]), top + baseLine), (0, 0, 255), cv.FILLED)
         cv.putText(image, text_label, (startPoint_x, top), cv.FONT_HERSHEY_SIMPLEX, 0.75, (0,0,0), 2)
 
-def extract_chars(image, debug=False, prefix_label=1, min_countours_area_ration=0.02, max_countours_area_ration=0.1):
+def extract_chars(image, debug=False, prefix_label='', min_countours_area_ratio=0.02, max_countours_area_ratio=0.1):
     images = {}
     img_gray = image
     output_directory = "../debug/"+prefix_label+"_"
     
     if(len(image.shape) > 2):
         img_gray = rgb2gray(image)
-        #images['img_gray'] = img_gray
 
     if(debug):
         img_out = img_gray.copy()
@@ -127,7 +126,6 @@ def extract_chars(image, debug=False, prefix_label=1, min_countours_area_ration=
     x = 3
     y = 3
     cbr = closing_by_reconstruction(img_gray, rectangle(x, y))
-    #images['closing_by_reconstruction_'+str(x)+'x'+str(y)] = cbr.copy()
     if(debug):
         img_out = cbr.copy()
         img_out *= 255
@@ -137,7 +135,6 @@ def extract_chars(image, debug=False, prefix_label=1, min_countours_area_ration=
     thresh = cbr >= th
     thresh = np.uint8(thresh)
     
-    #images['threshold'] = thresh.copy()
     if(debug):
         img_out = thresh.copy()
         img_out *= 255
@@ -145,7 +142,6 @@ def extract_chars(image, debug=False, prefix_label=1, min_countours_area_ration=
 
     mask = np.ones(thresh.shape, dtype=np.uint8)
     mask *= 255
-    #images['mask init'] = mask.copy()
 
     cnts = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
@@ -154,26 +150,21 @@ def extract_chars(image, debug=False, prefix_label=1, min_countours_area_ration=
     ROI_number = 0
     chars = []
     total_area = thresh.shape[0] * thresh.shape[1]
-    roi_area_threshold = total_area * max_countours_area_ration
-    logging.debug(f'Total area ({thresh.shape[0]}, {thresh.shape[1]}): {total_area} - roi area threshold: {roi_area_threshold}')
+    logging.debug(f'Total area ({thresh.shape[0]}, {thresh.shape[1]}): {total_area}')
     contours_used_for_masking = 0
-    for c in cnts:
-        # one single contour should have at maximum about max_countours_area_ratio (?? 10% ??) of the total image area and minimum of min_countours_area_ration (?? 2% ??)
-        area = cv.contourArea(c)        
-        roi_area_ration = area / total_area
-        logging.info(f'ROI {ROI_number} area: {area} - ratio: {roi_area_ration}')
-        if roi_area_ration >= min_countours_area_ration and roi_area_ration <= max_countours_area_ration:
+    for c in cnts:        
+        x,y,w,h = cv.boundingRect(c)
+        roi_area = w * h
+        roi_area_ratio = roi_area / total_area
+        logging.info(f'ROI {ROI_number} area: {roi_area} - ratio: {roi_area_ratio}')
+        
+        if roi_area_ratio >= min_countours_area_ratio and roi_area_ratio <= max_countours_area_ratio:
             contours_used_for_masking += 1
-            x,y,w,h = cv.boundingRect(c)
-            #ROI = 255 - thresh[y:y+h, x:x+w]
             ROI = thresh[y:y+h, x:x+w].copy()
-            #images['ROI_'+str(ROI_number)] = ROI.copy()
             
             mask[y:y+h, x:x+w] = 0
-            #images['mask_added_ROI_'+str(ROI_number)] = mask.copy()
 
             ch = np.array(ROI)
-            #images['ch_array_'+str(ROI_number)] = ch
             ch = cv.resize(ch,(28,28), interpolation = cv.INTER_AREA)            
             ch[ch != 0] = 255
             ch = util.invert(ch)
@@ -187,15 +178,12 @@ def extract_chars(image, debug=False, prefix_label=1, min_countours_area_ration=
     
     logging.info(f'Contours used for masking: {contours_used_for_masking}')
 
-    #images['mask'] = mask.copy()
-
     if(debug):
         img_out = mask.copy()
         cv.imwrite(output_directory+"mask.jpg", img_out)
     
     thresh *= 255
     thresh[mask != 0] = 255
-    #images['threshold_masked'] = thresh.copy()
 
     if(debug):
         img_out = thresh.copy()

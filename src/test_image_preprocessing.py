@@ -15,7 +15,7 @@ from skimage import util
 from skimage import data
 from skimage import feature
 from imutils import contours
-from image_preprocessing import opening_by_reconstruction, closing_by_reconstruction, display_images, plot_images
+from image_preprocessing import opening_by_reconstruction, closing_by_reconstruction, display_images, plot_images, extract_chars
 
 
 def test_threshold_methods(img):
@@ -162,133 +162,6 @@ def test_watershed(image):
 
     plot_images(images, 6, 3, cmap='gray')
 
-
-
-
-# pipeline for finding chars in imgages
-def test_pipeline(image):
-    debug=True 
-    min_countours_area_ration=0.005
-    max_countours_area_ration=0.1
-    output_directory = "testing/"
-    images = {}
-    img_gray = image
-    
-    if(len(image.shape) > 2):
-        img_gray = rgb2gray(image)
-    
-    images['img_gray'] = img_gray
-
-    if(debug):
-        img_out = img_gray.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"gray.jpg", img_out.astype(np.uint8))
-
-    x = 3
-    y = 3
-    cbr = closing_by_reconstruction(img_gray, rectangle(x, y))
-    images['closing_by_reconstruction_'+str(x)+'x'+str(y)] = cbr.copy()
-    if(debug):
-        img_out = cbr.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"closing_by_reconstruction.jpg", img_out)
-
-    th = threshold_niblack(img_gray, window_size=15, k=0.8)
-    thresh = cbr >= th
-    thresh = np.uint8(thresh)
-    images['threshold'] = thresh.copy()    
-    if(debug):
-        img_out = thresh.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"threshold.jpg", img_out)
-
-    thresh *= 255
-    canny_img = feature.canny(thresh, sigma=1)
-    canny_img = util.invert(canny_img)
-    canny_img = np.uint8(canny_img)
-    images['canny_img'] = canny_img.copy()
-    if(debug):
-        img_out = canny_img.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"canny.jpg", img_out.astype(np.uint8))
-
-    mask = np.ones(canny_img.shape, dtype=np.uint8)
-    mask *= 255
-    #images['mask init'] = mask.copy()
-
-    cnts = cv.findContours(canny_img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    logging.debug(f'Found {len(cnts)} contours!')
-    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-    (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
-
-    contours_img = img_gray.copy()
-    cv.drawContours(contours_img, cnts, -1, (0, 255, 0), -1)
-    images['contours_img'] = contours_img
-    if(debug):
-        img_out = contours_img.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"contours.jpg", img_out.astype(np.uint8))
-    
-    thresh = np.uint8(thresh)
-    result = thresh.copy()
-    ROI_number = 0
-    chars = []
-    total_area = result.shape[0] * result.shape[1]
-    roi_area_threshold = total_area * max_countours_area_ration
-    logging.debug(f'Total area ({result.shape[0]}, {result.shape[1]}): {total_area} - roi area threshold: {roi_area_threshold}')
-    contours_used_for_masking = 0
-    for c in cnts:
-        # one single contour should have at maximum about max_countours_area_ratio (?? 10% ??) of the total image area and minimum of min_countours_area_ration (?? 2% ??)
-        area = cv.contourArea(c)        
-        roi_area_ration = area / total_area
-        logging.info(f'ROI {ROI_number} area: {area} - ratio: {roi_area_ration}')
-        if roi_area_ration >= min_countours_area_ration and roi_area_ration <= max_countours_area_ration:
-            contours_used_for_masking += 1
-            x,y,w,h = cv.boundingRect(c)
-            ROI = result[y:y+h, x:x+w].copy()
-            images['ROI_'+str(ROI_number)] = ROI.copy()
-            
-            mask[y:y+h, x:x+w] = 0
-            images['mask_added_ROI_'+str(ROI_number)] = mask.copy()
-
-            ch = np.array(ROI)
-            #images['ch_array_'+str(ROI_number)] = ch
-            ch = cv.resize(ch,(28,28), interpolation = cv.INTER_AREA)            
-            ch[ch != 0] = 255
-            ch = util.invert(ch)
-            #images['ch_'+str(ROI_number)] = ch
-            chars.append(ch)
-
-            if(debug):
-                cv.imwrite(output_directory+"char_"+str(ROI_number)+".jpg", ch)
-
-        ROI_number += 1
-    
-    logging.info(f'\n\nContours used for masking: {contours_used_for_masking}')
-
-    mask = util.invert(mask)
-    mask *= 255
-    images['mask'] = mask.copy()
-
-    if(debug):
-        img_out = mask.copy()
-        cv.imwrite(output_directory+"mask.jpg", img_out)
-    
-    thresh *= 255
-    images['threshold__'] = result.copy()
-    result_masked = cv.bitwise_and(thresh, mask)
-    images['result_masked'] = result_masked.copy()
-
-    if(debug):
-        img_out = result_masked.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"result_masked.jpg", img_out.astype(np.uint8))  
-
-    plot_images(images, 7, 5, cmap='gray')
-
-    return result_masked, chars
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Testing Image Processing Algorithms.')
     parser.add_argument('--image', help='Path to image file.')
@@ -309,6 +182,6 @@ if __name__ == '__main__':
         #test_morphological_methods(frame)
         #test_histogram_equalization_methods(frame)
         #test_watershed(frame)
-        test_pipeline(frame)
+        extract_chars(frame, debug=True, prefix_label='test', min_countours_area_ratio=0.008, max_countours_area_ratio=0.1)
     else:
         logging.debug("Frame not found!")
