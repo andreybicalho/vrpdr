@@ -31,3 +31,4 @@ log*.txt
 *.pt
 *.csv
 *.json
+*.pth

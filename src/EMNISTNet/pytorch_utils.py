@@ -56,10 +56,10 @@ class TrainingManager():
         self.loader = loader
         self.tb = SummaryWriter(comment=f'-{run}')
 
-        images, labels = next(iter(self.loader))
-        grid = torchvision.utils.make_grid(images)
-
+        self.cached_images, labels = next(iter(self.loader)) # images will be cached to use in tracing when exporting for mobile
+        grid = torchvision.utils.make_grid(self.cached_images)
         self.tb.add_image('images', grid)
+
         # FIXME(andrey): adding model to tensorboard is crashing when model is running on GPU
         #self.tb.add_graph(self.model, images)
 
@@ -115,7 +115,7 @@ class TrainingManager():
     def track_num_corret(self, preds, labels):
         self.epoch_num_correct += self._get_num_correct(preds, labels)    
 
-    def save(self, filename, save_training_report=False):
+    def save(self, filename, save_training_report=False, export_for_mobile_loading=False):
         """
             Save results and model.
         """
@@ -129,5 +129,12 @@ class TrainingManager():
             # save json
             with open(f'{filename}.json', 'w', encoding='utf-8') as f:
                 json.dump(self.run_data, f, ensure_ascii=False, indent=4)
+
+
+        if export_for_mobile_loading:
+            self.model.to("cpu")
+            self.cached_images.to("cpu")
+            traced_cpu = torch.jit.trace(self.model, self.cached_images)
+            torch.jit.save(traced_cpu, f'{filename}_mobile.pth')
 
         torch.save(self.model.state_dict(), f'{filename}.pt')

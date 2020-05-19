@@ -89,7 +89,8 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', type=str2bool, nargs='?', const=False, default=False, help='use CUDA if available')
     parser.add_argument('--v', type=str2bool, nargs='?', const=False, default=False, help='verbose and debug msgs')
     parser.add_argument('--d', help='Path to the custom dataset')
-    parser.add_argument('--o', help='Output filename')
+    parser.add_argument('--o', help='Output model filename')
+    parser.add_argument('--mobile', type=str2bool, nargs='?', const=False, default=False, help='export model for mobile loading')
     parser.add_argument('--n', type=int, nargs='?', const=1, default=1, help='net model to use')
     parser.add_argument('--b', type=int, nargs='?', const=500, default=500, help='batch size')
     args = parser.parse_args()
@@ -147,4 +148,4 @@ if __name__ == '__main__':
         train_manager.end_run()
 
     if args.o is not None:
-        train_manager.save(filename=args.o)
+        train_manager.save(filename=args.o, export_for_mobile_loading=True)
