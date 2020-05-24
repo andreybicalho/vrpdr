@@ -110,85 +110,96 @@ def draw_bounding_box(image, text_label, startPoint_x, startPoint_y, endPoint_x,
         cv.rectangle(image, (startPoint_x, top - round(1.5*labelSize[1])), (startPoint_x + round(1.5*labelSize[0]), top + baseLine), (0, 0, 255), cv.FILLED)
         cv.putText(image, text_label, (startPoint_x, top), cv.FONT_HERSHEY_SIMPLEX, 0.75, (0,0,0), 2)
 
-def extract_chars(image, debug=False, prefix_label='', min_countours_area_ratio=0.02, max_countours_area_ratio=0.1):
-    images = {}
-    img_gray = image
-    output_directory = "../debug/"+prefix_label+"_"
-    
-    if(len(image.shape) > 2):
-        img_gray = rgb2gray(image)
+def cv_skeletonize(img):
+    """
+    Steps:
+        1 - Starting off with an empty skeleton.
+        2 - Computing the opening of the original image. Let’s call this open.
+        3 - Substracting open from the original image. Let’s call this temp.
+        4 - Eroding the original image and refining the skeleton by computing the union of the current skeleton and temp.
+        5 - Repeat Steps 2–4 till the original image is completely eroded.
+    """
+    element = cv.getStructuringElement(cv.MORPH_CROSS, (3,3))
+    # Step 1: Create an empty skeleton
+    skel = np.zeros(img.shape, np.uint8)
+    while True:
+        #Step 2: Open the image
+        open = cv.morphologyEx(img, cv.MORPH_OPEN, element)
+        #Step 3: Substract open from the original image
+        temp = cv.subtract(img, open)
+        #Step 4: Erode the original image and refine the skeleton
+        eroded = cv.erode(img, element)
+        skel = cv.bitwise_or(skel, temp)
+        img = eroded.copy()
+        # Step 5: If there are no white pixels left ie.. the image has been completely eroded, quit the loop
+        if cv.countNonZero(img)==0:
+            break
 
-    if(debug):
-        img_out = img_gray.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"gray.jpg", img_out.astype(np.uint8))
+    return skel
 
-    x = 3
-    y = 3
-    cbr = closing_by_reconstruction(img_gray, rectangle(x, y))
-    if(debug):
-        img_out = cbr.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"closing_by_reconstruction.jpg", img_out)
-
-    th = threshold_li(cbr)
-    thresh = cbr >= th
-    thresh = np.uint8(thresh)
-    
-    if(debug):
-        img_out = thresh.copy()
-        img_out *= 255
-        cv.imwrite(output_directory+"threshold.jpg", img_out)
-
-    mask = np.ones(thresh.shape, dtype=np.uint8)
-    mask *= 255
-
-    cnts = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+def extract_contours(image, min_contours_area_ratio=0.02, max_contours_area_ratio=0.2):
+    mask = np.zeros(image.shape, dtype=np.uint8)
+    cnts = cv.findContours(image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
     (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
     logging.debug(f'Found {len(cnts)} contours!')
-    ROI_number = 0
-    chars = []
-    total_area = thresh.shape[0] * thresh.shape[1]
-    logging.debug(f'Total area ({thresh.shape[0]}, {thresh.shape[1]}): {total_area}')
+    roi_index = 0
+    total_area = image.shape[0] * image.shape[1]
+    logging.debug(f'Total area ({image.shape[0]}, {image.shape[1]}): {total_area}')
     contours_used_for_masking = 0
+    rois = []
     for c in cnts:        
         x,y,w,h = cv.boundingRect(c)
         roi_area = w * h
         roi_area_ratio = roi_area / total_area
-        logging.info(f'ROI {ROI_number} area: {roi_area} - ratio: {roi_area_ratio}')
+        logging.debug(f'ROI {roi_index} area: {roi_area} - ratio: {roi_area_ratio}')
         
-        if roi_area_ratio >= min_countours_area_ratio and roi_area_ratio <= max_countours_area_ratio:
+        if roi_area_ratio >= min_contours_area_ratio and roi_area_ratio <= max_contours_area_ratio:
             contours_used_for_masking += 1
-            ROI = thresh[y:y+h, x:x+w].copy()
+            roi = image[y:y+h, x:x+w].copy()
             
-            mask[y:y+h, x:x+w] = 0
+            mask[y:y+h, x:x+w] = 255
 
-            ch = np.array(ROI)
-            ch = cv.resize(ch,(28,28), interpolation = cv.INTER_AREA)            
-            ch[ch != 0] = 255
-            ch = util.invert(ch)
-            #images['ch_'+str(ROI_number)] = ch
-            chars.append(ch)
+            aux_roi = np.array(roi)
+            aux_roi = cv.resize(aux_roi,(28,28), interpolation = cv.INTER_AREA)            
+            aux_roi[aux_roi != 0] = 255
+            rois.append(aux_roi)
 
-            if(debug):
-                cv.imwrite(output_directory+"char_"+str(ROI_number)+".jpg", ch)
+        roi_index += 1
 
-        ROI_number += 1
+    logging.debug(f'Contours used for masking: {contours_used_for_masking}')
+
+    return rois, mask
+
+def marker_based_watershed_segmentation(image, pre_marker_img):    
+    skeleton = cv_skeletonize(pre_marker_img)
+    ret, markers = cv.connectedComponents(skeleton)
+    watershed_result = cv.watershed(image, markers)
     
-    logging.info(f'Contours used for masking: {contours_used_for_masking}')
-
-    if(debug):
-        img_out = mask.copy()
-        cv.imwrite(output_directory+"mask.jpg", img_out)
+    return watershed_result
     
-    thresh *= 255
-    thresh[mask != 0] = 255
+def extract_chars(image):
+    img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
 
-    if(debug):
-        img_out = thresh.copy()
-        cv.imwrite(output_directory+"threshold_masked.jpg", img_out)    
+    #cbr = closing_by_reconstruction(img_gray, rectangle(3, 3))
+    #th = threshold_li(cbr)
+    #thresh = cbr >= th
+    #thresh = np.uint8(thresh)
 
-    plot_images(images, 7, 5, cmap='gray')
+    watershed_result = marker_based_watershed_segmentation(image, thresh)
 
-    return thresh, chars
+    watershed_result[watershed_result == -1] = 255
+    watershed_result[watershed_result != 255] = 0
+    watershed_result = np.uint8(watershed_result)
+
+    _, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+    thresh[mask == 0] = 0    
+
+    # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
+    char_contours, _ = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+
+    # now make the image properly for tesseract (white background)
+    thresh = util.invert(thresh)
+
+    return thresh, char_contours

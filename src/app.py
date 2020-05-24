@@ -5,7 +5,7 @@ import base64
 
 import logging
 
-from image_preprocessing import extract_chars, display_images, equalize_histogram, draw_bounding_box
+from image_preprocessing import extract_chars
 from yolo import Yolo
 from ocr import OCR
 
@@ -53,6 +53,10 @@ def run_lpr():
                 logging.info(f'\n\nProcessing ROI {index}')
                 box = [yolo.bounding_boxes[index][0], yolo.bounding_boxes[index][1], yolo.bounding_boxes[index][2], yolo.bounding_boxes[index][3]]
                 predict(yolo.img, roi_img, box, str(index), (0,255,0), ocr)
+                
+                if(DEBUG):
+                    cv.imwrite("../debug/roi_"+str(index)+".jpg", roi_img.astype(np.uint8))
+
                 index += 1
 
             # API response: the highest confidence one
@@ -84,7 +88,7 @@ def run_lpr():
     return response
 
 def predict(input_image, roi_img, bounding_box, prefix_label, background_color, emnist_net):
-    img, characteres = extract_chars(roi_img, prefix_label=prefix_label, min_countours_area_ratio=0.01, debug=True)
+    img, characteres = extract_chars(roi_img)
     
     emnist_net_preds = emnist_net.predict(characteres)
 

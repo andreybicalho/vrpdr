@@ -15,7 +15,7 @@ from skimage import util
 from skimage import data
 from skimage import feature
 from imutils import contours
-from image_preprocessing import opening_by_reconstruction, closing_by_reconstruction, display_images, plot_images, extract_chars
+from image_preprocessing import opening_by_reconstruction, closing_by_reconstruction, display_images, plot_images, cv_skeletonize, extract_contours
 
 
 def test_threshold_methods(img):
@@ -102,66 +102,6 @@ def test_histogram_equalization_methods(image):
     
     plot_images(images, 2, 3, cmap='gray')
 
-def test_watershed(image):
-    images = {}
-    img = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    images['grayscale'] = img
-
-
-    r = 3
-    img = opening(img, disk(r))
-    images['opening'+str(r)] = img
-
-    w = 3
-    h = 3
-    img = closing_by_reconstruction(img, rectangle(w, h))
-    images['closing_by_reconstruction_'+str(w)+'x'+str(h)] = img
-    img = np.uint8(img)
-    
-    sigma=3
-    img = feature.canny(img, sigma=sigma)
-    images['canny_'+str(sigma)] = img
-
-    img = np.uint8(img)
-    ret, thresh = cv.threshold(img, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
-    images['threshold'] = thresh
-
-    r = 5
-    img = opening(img, disk(r))
-    images['opening_'+str(r)] = img
-
-    # noise removal
-    kernel = np.ones((3,3),np.uint8)
-    opened = cv.morphologyEx(thresh,cv.MORPH_OPEN,kernel, iterations = 2)
-    images['opened'] = opened
-    # sure background area
-    sure_bg = cv.dilate(opened,kernel,iterations=3)
-    images['sure_bg'] = sure_bg
-    # Finding sure foreground area
-    dist_transform = cv.distanceTransform(opened,cv.DIST_L2,5)
-    ret, sure_fg = cv.threshold(dist_transform,0.7*dist_transform.max(),255,0)
-    images['dist_transform'] = dist_transform
-    images['sure_fg'] = sure_fg
-    # Finding unknown region
-    sure_fg = np.uint8(sure_fg)
-    unknown = cv.subtract(sure_bg, sure_fg)
-    images['unknown'] = unknown
-    # Marker labelling
-    ret, markers = cv.connectedComponents(sure_fg)
-    images['markers'] = markers
-    # Add one to all labels so that sure background is not 0, but 1
-    markers = markers+1
-    images['markers+1'] = markers
-    # Now, mark the region of unknown with zero
-    markers[unknown==255] = 0
-    images['markers_unknown'] = markers
-    markers = cv.watershed(image, markers)
-    images['markers_watershed'] = markers
-    image[markers == -1] = [255, 0, 0]
-    images['image'] = image
-
-    plot_images(images, 6, 3, cmap='gray')
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Testing Image Processing Algorithms.')
     parser.add_argument('--image', help='Path to image file.')
@@ -181,7 +121,47 @@ if __name__ == '__main__':
         #test_threshold_methods(frame)
         #test_morphological_methods(frame)
         #test_histogram_equalization_methods(frame)
-        #test_watershed(frame)
-        extract_chars(frame, debug=True, prefix_label='test', min_countours_area_ratio=0.008, max_countours_area_ratio=0.1)
+        images = {}
+        img = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        images['gray'] = img.copy()
+
+        #cbr = closing_by_reconstruction(img, rectangle(3, 3))
+        #images['cbr'] = cbr.copy()
+        #th = threshold_li(cbr)
+        #thresh = cbr >= th
+        #thresh = np.uint8(thresh)
+        ret, thresh = cv.threshold(img, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
+        images['threshold'] = thresh.copy()
+
+        skeleton = cv_skeletonize(thresh)
+        images['skeleton'] = skeleton.copy()
+
+        ret, markers = cv.connectedComponents(skeleton)
+        images['markers'] = markers.copy()
+        
+        watershed_result = cv.watershed(frame, markers)
+        images['watershed result'] = watershed_result.copy()
+
+        watershed_result[watershed_result == -1] = 255
+        watershed_result[watershed_result != 255] = 0
+        watershed_result = np.uint8(watershed_result)
+        images['watershed preprocessed'] = watershed_result.copy()
+
+        chars, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+        #display_images(chars, 5, 5)
+        images['mask'] = mask.copy()
+        
+        thresh[mask == 0] = 0
+        images['threshold masked'] = thresh.copy()
+
+        chars, mask2 = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+        display_images(chars, 5, 5)
+
+        thresh = util.invert(thresh)
+        images['threshold masked inverted'] = thresh.copy()
+
+        plot_images(images, 6, 6, cmap='gray')
+
+
     else:
         logging.debug("Frame not found!")
