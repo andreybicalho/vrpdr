@@ -88,7 +88,7 @@ def run_lpr():
     return response
 
 def predict(input_image, roi_img, bounding_box, prefix_label, background_color, emnist_net):
-    img, characteres = extract_chars(roi_img)
+    characteres, img, mask = extract_chars(roi_img)
     
     emnist_net_preds = emnist_net.predict(characteres)
 
@@ -106,7 +106,11 @@ def predict(input_image, roi_img, bounding_box, prefix_label, background_color, 
     h = (bounding_box[1] + bounding_box[3]) + 25
     
     cv.rectangle(input_image, (x, y), (w, h), background_color, cv.FILLED)                    
-    cv.putText(input_image, text, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)    
+    cv.putText(input_image, text, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)
+
+    if(DEBUG):
+        cv.imwrite("../debug/roi_masked_"+prefix_label+".jpg", img.astype(np.uint8))
+        cv.imwrite("../debug/roi_mask_"+prefix_label+".jpg", mask.astype(np.uint8))
 
     return characteres, emnist_net_preds, tesseract_preds
 

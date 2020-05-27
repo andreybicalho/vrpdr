@@ -35,7 +35,7 @@ def opening_by_reconstruction(image, se):
     reconstructed = reconstruction(eroded, image)
     return reconstructed
 
-def closing_by_reconstruction(image, se):    
+def closing_by_reconstruction(image, se, iterations=1):
     obr = opening_by_reconstruction(image, se)
 
     obr_inverted = util.invert(obr)
@@ -180,14 +180,14 @@ def marker_based_watershed_segmentation(image, pre_marker_img):
     
 def extract_chars(image):
     img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+
     ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
 
-    #cbr = closing_by_reconstruction(img_gray, rectangle(3, 3))
-    #th = threshold_li(cbr)
-    #thresh = cbr >= th
-    #thresh = np.uint8(thresh)
+    se = cv.getStructuringElement(cv.MORPH_CROSS, (3,3))
+    eroded = cv.erode(thresh, se, iterations=2)
+    dilated = cv.dilate(eroded, se, iterations=2)
 
-    watershed_result = marker_based_watershed_segmentation(image, thresh)
+    watershed_result = marker_based_watershed_segmentation(image, dilated)
 
     watershed_result[watershed_result == -1] = 255
     watershed_result[watershed_result != 255] = 0
@@ -202,4 +202,4 @@ def extract_chars(image):
     # now make the image properly for tesseract (white background)
     thresh = util.invert(thresh)
 
-    return thresh, char_contours
+    return char_contours, thresh, mask

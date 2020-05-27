@@ -90,7 +90,8 @@ def test_morphological_methods(image):
 def test_histogram_equalization_methods(image):
     images = {}
     
-    img_gray = rgb2gray(image)
+    #img_gray = rgb2gray(image)
+    img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     images['grayscale'] = img_gray
 
     global_eq = exposure.equalize_hist(img_gray)
@@ -98,9 +99,17 @@ def test_histogram_equalization_methods(image):
 
     selem = disk(30)
     local_eq = rank.equalize(img_gray, selem=selem)
-    images['local'] = local_eq    
-    
-    plot_images(images, 2, 3, cmap='gray')
+    images['local'] = local_eq
+
+    # Adaptive Equalization
+    img_adapteq = exposure.equalize_adapthist(img_gray, clip_limit=0.03)
+    images['adaptative'] = img_adapteq
+
+    clahe = cv.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
+    clahe_img = clahe.apply(img_gray)
+    images['clahe'] = clahe_img
+
+    plot_images(images, 3, 3, cmap='gray')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Testing Image Processing Algorithms.')
@@ -125,15 +134,23 @@ if __name__ == '__main__':
         img = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         images['gray'] = img.copy()
 
-        #cbr = closing_by_reconstruction(img, rectangle(3, 3))
-        #images['cbr'] = cbr.copy()
-        #th = threshold_li(cbr)
-        #thresh = cbr >= th
-        #thresh = np.uint8(thresh)
+        #clahe = cv.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        #img = clahe.apply(img)
+        #images['clahe'] = img.copy()
+
+        #img = cv.GaussianBlur(img, (5,5), cv.BORDER_DEFAULT)
+        #images['blur'] = img.copy()
+
         ret, thresh = cv.threshold(img, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
         images['threshold'] = thresh.copy()
 
-        skeleton = cv_skeletonize(thresh)
+        se = cv.getStructuringElement(cv.MORPH_CROSS, (3,3))
+        eroded = cv.erode(thresh, se, iterations=2)
+        images['eroded'] = eroded.copy()
+        dilated = cv.dilate(eroded, se, iterations=2)
+        images['dilated'] = dilated.copy()
+
+        skeleton = cv_skeletonize(dilated)
         images['skeleton'] = skeleton.copy()
 
         ret, markers = cv.connectedComponents(skeleton)
@@ -154,8 +171,8 @@ if __name__ == '__main__':
         thresh[mask == 0] = 0
         images['threshold masked'] = thresh.copy()
 
-        chars, mask2 = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
-        display_images(chars, 5, 5)
+        chars, mask = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.3)
+        #display_images(chars, 5, 5)
 
         thresh = util.invert(thresh)
         images['threshold masked inverted'] = thresh.copy()
