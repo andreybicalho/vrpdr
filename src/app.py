@@ -5,7 +5,7 @@ import base64
 
 import logging
 
-from image_preprocessing import extract_chars
+from image_processing import extract_chars
 from yolo import Yolo
 from ocr import OCR
 

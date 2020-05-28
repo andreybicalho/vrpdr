@@ -15,7 +15,7 @@ from skimage import util
 from skimage import data
 from skimage import feature
 from imutils import contours
-from image_preprocessing import opening_by_reconstruction, closing_by_reconstruction, display_images, plot_images, cv_skeletonize, extract_contours
+from image_processing import opening_by_reconstruction, closing_by_reconstruction, display_images, plot_images, cv_skeletonize, extract_contours, skeleton_marker_based_watershed_segmentation, intersection_lines_marker_based_watershed_segmentation
 
 
 def test_threshold_methods(img):
@@ -111,6 +111,65 @@ def test_histogram_equalization_methods(image):
 
     plot_images(images, 3, 3, cmap='gray')
 
+def test_pipeline(image):
+    logging.debug(f'frame image: {image.shape} ---> {image.dtype}')
+    #test_threshold_methods(image)
+    #test_morphological_methods(image)
+    #test_histogram_equalization_methods(image)
+    images = {}
+    img = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    images['gray'] = img.copy()
+
+    ret, thresh = cv.threshold(img, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
+    images['threshold'] = thresh.copy()
+    output_img = thresh.copy()
+
+    #element = cv.getStructuringElement(cv.MORPH_CROSS, (3,3))
+    #open_img = cv.morphologyEx(thresh, cv.MORPH_OPEN, element)
+    #images['opened'] = open_img.copy()
+
+    intersection_line_img = np.zeros(img.shape, np.uint8)
+    height, width = img.shape
+    logging.debug(f'{width} x {height}')
+         
+    cv.line(intersection_line_img, pt1=(0, int(height/2)), pt2=(width, int(height/2)), color=(255), thickness=3)
+    cv.line(intersection_line_img, pt1=(0, int(height/2+height/4)), pt2=(width, int(height/2+height/4)), color=(255), thickness=3)
+    logging.debug(f'{intersection_line_img.shape}')
+    images['intersection line'] = intersection_line_img.copy()
+
+    intersection_img = cv.bitwise_and(intersection_line_img, thresh)
+    #intersection_img = np.uint8(intersection_img)
+    logging.debug(f'intersection image: {intersection_img.shape} ---> {intersection_img.dtype}')
+    images['intersection'] = intersection_img.copy()
+
+    ret, markers = cv.connectedComponents(intersection_img)
+    images['markers'] = markers.copy()
+
+    watershed_result = cv.watershed(image, markers)
+    images['watershed result'] = watershed_result.copy()
+
+    watershed_result[watershed_result == -1] = 255
+    watershed_result[watershed_result != 255] = 0
+    watershed_result = np.uint8(watershed_result)
+    images['watershed preprocessed'] = watershed_result.copy()
+
+    chars, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+    #display_images(chars, 5, 5)
+    images['mask'] = mask.copy()
+        
+    thresh[mask == 0] = 0
+    images['threshold masked'] = thresh.copy()
+
+    chars, mask2 = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.3)
+    #display_images(chars, 5, 5)
+    images['mask 2'] = mask2.copy()
+    output_img[mask2 == 0] = 0
+
+    output_img = util.invert(output_img)
+    images['output'] = output_img.copy()
+
+    plot_images(images, 6, 6, cmap='gray')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Testing Image Processing Algorithms.')
     parser.add_argument('--image', help='Path to image file.')
@@ -127,58 +186,38 @@ if __name__ == '__main__':
     hasFrame, frame = cap.read()
 
     if hasFrame:
-        #test_threshold_methods(frame)
-        #test_morphological_methods(frame)
-        #test_histogram_equalization_methods(frame)
+        test_pipeline(frame)
+
         images = {}
-        img = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        images['gray'] = img.copy()
-
-        #clahe = cv.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-        #img = clahe.apply(img)
-        #images['clahe'] = img.copy()
-
-        #img = cv.GaussianBlur(img, (5,5), cv.BORDER_DEFAULT)
-        #images['blur'] = img.copy()
-
-        ret, thresh = cv.threshold(img, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
+        image = frame
+        img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        images['gray'] = img_gray.copy()
+        ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
         images['threshold'] = thresh.copy()
+        output_img = thresh.copy()
 
-        se = cv.getStructuringElement(cv.MORPH_CROSS, (3,3))
-        eroded = cv.erode(thresh, se, iterations=2)
-        images['eroded'] = eroded.copy()
-        dilated = cv.dilate(eroded, se, iterations=2)
-        images['dilated'] = dilated.copy()
+        watershed_result = skeleton_marker_based_watershed_segmentation(image, thresh)
+        images['watershed skeleton'] = watershed_result.copy()
+    
+        watershed_result = intersection_lines_marker_based_watershed_segmentation(image, thresh)
+        images['watershed intersection line'] = watershed_result.copy()
 
-        skeleton = cv_skeletonize(dilated)
-        images['skeleton'] = skeleton.copy()
-
-        ret, markers = cv.connectedComponents(skeleton)
-        images['markers'] = markers.copy()
-        
-        watershed_result = cv.watershed(frame, markers)
-        images['watershed result'] = watershed_result.copy()
-
-        watershed_result[watershed_result == -1] = 255
-        watershed_result[watershed_result != 255] = 0
-        watershed_result = np.uint8(watershed_result)
-        images['watershed preprocessed'] = watershed_result.copy()
-
-        chars, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
-        #display_images(chars, 5, 5)
-        images['mask'] = mask.copy()
-        
+        char_contours, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
         thresh[mask == 0] = 0
-        images['threshold masked'] = thresh.copy()
+        images['mask 1'] = mask.copy() 
+        images['threshold masked 1'] = thresh.copy()
 
-        chars, mask = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.3)
-        #display_images(chars, 5, 5)
+        # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
+        char_contours, mask2 = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+        images['mask 2'] = mask2.copy()
+        output_img[mask2 == 0] = 0
+        images['threshold masked 2'] = output_img.copy()
 
-        thresh = util.invert(thresh)
-        images['threshold masked inverted'] = thresh.copy()
+        output_img = util.invert(output_img)
+        images['output'] = output_img.copy()
 
         plot_images(images, 6, 6, cmap='gray')
-
+        
 
     else:
         logging.debug("Frame not found!")
