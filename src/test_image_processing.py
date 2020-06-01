@@ -6,7 +6,7 @@ import os.path
 import logging
 import matplotlib.pyplot as plt
 from skimage.color import rgb2gray
-from skimage.morphology import erosion, dilation, opening, closing, black_tophat
+from skimage.morphology import erosion, dilation, opening, closing, black_tophat, white_tophat
 from skimage.morphology import reconstruction
 from skimage.morphology import disk, square, rectangle
 from skimage.filters import threshold_li, threshold_mean, threshold_multiotsu, threshold_niblack, threshold_yen, threshold_otsu, threshold_local, threshold_sauvola, threshold_niblack, rank
@@ -85,7 +85,19 @@ def test_morphological_methods(image):
     images['dilation 7x7'] = dilation(img_gray, square(7))
     images['dilation 9x9'] = dilation(img_gray, square(9))
     images['dilation 11x11'] = dilation(img_gray, square(11))
-    plot_images(images, 7, 5, cmap="gray")
+    # black tophat
+    images['black_tophat 3x3'] = black_tophat(img_gray, square(3))
+    images['black_tophat 5x5'] = black_tophat(img_gray, square(5))
+    images['black_tophat 7x7'] = black_tophat(img_gray, square(7))
+    images['black_tophat 9x9'] = black_tophat(img_gray, square(9))
+    images['black_tophat 11x11'] = black_tophat(img_gray, square(11))
+    # white tophat
+    images['white_tophat 3x3'] = white_tophat(img_gray, square(3))
+    images['white_tophat 5x5'] = white_tophat(img_gray, square(5))
+    images['white_tophat 7x7'] = white_tophat(img_gray, square(7))
+    images['white_tophat 9x9'] = white_tophat(img_gray, square(9))
+    images['white_tophat 11x11'] = white_tophat(img_gray, square(11))
+    plot_images(images, 9, 5, cmap="gray")
 
 def test_histogram_equalization_methods(image):
     images = {}
@@ -111,64 +123,100 @@ def test_histogram_equalization_methods(image):
 
     plot_images(images, 3, 3, cmap='gray')
 
-def test_pipeline(image):
-    logging.debug(f'frame image: {image.shape} ---> {image.dtype}')
-    #test_threshold_methods(image)
-    #test_morphological_methods(image)
-    #test_histogram_equalization_methods(image)
+def test_skeleton_marker_based_watershed_segmentation(image):
     images = {}
-    img = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    images['gray'] = img.copy()
-
-    ret, thresh = cv.threshold(img, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
-    images['threshold'] = thresh.copy()
+    img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    images['gray'] = img_gray.copy()
+    ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
+    images['threshold inv'] = thresh.copy()
     output_img = thresh.copy()
 
-    #element = cv.getStructuringElement(cv.MORPH_CROSS, (3,3))
-    #open_img = cv.morphologyEx(thresh, cv.MORPH_OPEN, element)
-    #images['opened'] = open_img.copy()
+    structuringElement = cv.getStructuringElement(cv.MORPH_RECT, (5, 5))
+    pre_marker_img = cv.morphologyEx(img_gray, cv.MORPH_BLACKHAT, structuringElement)
+    images['black hat'] = pre_marker_img.copy()
 
-    intersection_line_img = np.zeros(img.shape, np.uint8)
-    height, width = img.shape
-    logging.debug(f'{width} x {height}')
-         
-    cv.line(intersection_line_img, pt1=(0, int(height/2)), pt2=(width, int(height/2)), color=(255), thickness=3)
-    cv.line(intersection_line_img, pt1=(0, int(height/2+height/4)), pt2=(width, int(height/2+height/4)), color=(255), thickness=3)
-    logging.debug(f'{intersection_line_img.shape}')
-    images['intersection line'] = intersection_line_img.copy()
+    ret, pre_marker_img = cv.threshold(pre_marker_img, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
+    images['pre marker threshold'] = pre_marker_img.copy()
 
-    intersection_img = cv.bitwise_and(intersection_line_img, thresh)
-    #intersection_img = np.uint8(intersection_img)
-    logging.debug(f'intersection image: {intersection_img.shape} ---> {intersection_img.dtype}')
-    images['intersection'] = intersection_img.copy()
-
-    ret, markers = cv.connectedComponents(intersection_img)
+    skeleton = cv_skeletonize(pre_marker_img)
+    images['skeleton'] = skeleton.copy()
+    ret, markers = cv.connectedComponents(skeleton)
     images['markers'] = markers.copy()
-
     watershed_result = cv.watershed(image, markers)
-    images['watershed result'] = watershed_result.copy()
+    images['watershed_result'] = watershed_result.copy()
 
     watershed_result[watershed_result == -1] = 255
     watershed_result[watershed_result != 255] = 0
     watershed_result = np.uint8(watershed_result)
-    images['watershed preprocessed'] = watershed_result.copy()
+    images['final watershed_result'] = watershed_result.copy()
 
-    chars, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
-    #display_images(chars, 5, 5)
+    _, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
     images['mask'] = mask.copy()
-        
+
     thresh[mask == 0] = 0
-    images['threshold masked'] = thresh.copy()
+    images['thresh masked'] = thresh.copy()
 
-    chars, mask2 = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.3)
-    #display_images(chars, 5, 5)
-    images['mask 2'] = mask2.copy()
-    output_img[mask2 == 0] = 0
+    # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
+    char_contours, refined_mask = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+    images['refined_mask'] = refined_mask.copy()
 
+    output_img[refined_mask == 0] = 0
+    images['thresh refine masked'] = output_img.copy()
     output_img = util.invert(output_img)
-    images['output'] = output_img.copy()
+    images['final result'] = output_img.copy()
 
-    plot_images(images, 6, 6, cmap='gray')
+    plot_images(images, 4, 4, cmap='gray')
+
+def test_intersection_lines_marker_based_watershed_segmentation(image):
+    images = {}
+    img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    images['gray'] = img_gray.copy()
+    ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
+    images['threshold inv'] = thresh.copy()
+    output_img = thresh.copy()
+
+    structuringElement = cv.getStructuringElement(cv.MORPH_RECT, (5, 5))
+    pre_marker_img = cv.morphologyEx(img_gray, cv.MORPH_BLACKHAT, structuringElement)
+    images['black hat'] = pre_marker_img.copy()
+
+    ret, pre_marker_img = cv.threshold(pre_marker_img, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
+    images['pre marker threshold'] = pre_marker_img.copy()
+
+    intersection_line_img = np.zeros(pre_marker_img.shape, np.uint8)
+    height, width = pre_marker_img.shape
+
+    cv.line(intersection_line_img, pt1=(0, int(height/2)), pt2=(width, int(height/2)), color=(255), thickness=5)
+    cv.line(intersection_line_img, pt1=(0, int(height/2+height/4)), pt2=(width, int(height/2+height/4)), color=(255), thickness=5)
+    images['lines'] = intersection_line_img.copy()
+    intersection_img = cv.bitwise_and(intersection_line_img, pre_marker_img)
+    images['lines and pre marker intersection'] = intersection_img.copy()
+
+    ret, markers = cv.connectedComponents(intersection_img)
+    images['markers'] = markers.copy()
+    watershed_result = cv.watershed(image, markers)
+    images['watershed_result'] = watershed_result.copy()
+
+    watershed_result[watershed_result == -1] = 255
+    watershed_result[watershed_result != 255] = 0
+    watershed_result = np.uint8(watershed_result)
+    images['final watershed_result'] = watershed_result.copy()    
+
+    _, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+    images['mask'] = mask.copy()
+
+    thresh[mask == 0] = 0
+    images['thresh masked'] = thresh.copy()
+
+    # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
+    char_contours, refined_mask = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+    images['refined_mask'] = refined_mask.copy()
+
+    output_img[refined_mask == 0] = 0
+    images['thresh refine masked'] = output_img.copy()
+    output_img = util.invert(output_img)
+    images['final result'] = output_img.copy()
+
+    plot_images(images, 4, 4, cmap='gray')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Testing Image Processing Algorithms.')
@@ -186,37 +234,65 @@ if __name__ == '__main__':
     hasFrame, frame = cap.read()
 
     if hasFrame:
-        test_pipeline(frame)
+        #test_threshold_methods(image)
+        #test_histogram_equalization_methods(image)
+        #test_morphological_methods(frame)
+        test_skeleton_marker_based_watershed_segmentation(frame)
+        test_intersection_lines_marker_based_watershed_segmentation(frame)
 
+
+        # comparing both methods
         images = {}
         image = frame
         img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-        images['gray'] = img_gray.copy()
+        images['skel gray'] = img_gray.copy()
         ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
-        images['threshold'] = thresh.copy()
+        images['skel threshold'] = thresh.copy()
         output_img = thresh.copy()
 
-        watershed_result = skeleton_marker_based_watershed_segmentation(image, thresh)
-        images['watershed skeleton'] = watershed_result.copy()
-    
-        watershed_result = intersection_lines_marker_based_watershed_segmentation(image, thresh)
-        images['watershed intersection line'] = watershed_result.copy()
+        # skeleton method
+        watershed_result = skeleton_marker_based_watershed_segmentation(image)
+        images['skel watershed'] = watershed_result.copy()        
 
         char_contours, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
         thresh[mask == 0] = 0
-        images['mask 1'] = mask.copy() 
-        images['threshold masked 1'] = thresh.copy()
+        images['skel mask 1'] = mask.copy() 
+        images['skel threshold masked 1'] = thresh.copy()
 
         # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
         char_contours, mask2 = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
-        images['mask 2'] = mask2.copy()
+        images['skel mask 2'] = mask2.copy()
         output_img[mask2 == 0] = 0
-        images['threshold masked 2'] = output_img.copy()
+        images['skel threshold masked 2'] = output_img.copy()
 
         output_img = util.invert(output_img)
-        images['output'] = output_img.copy()
+        images['skel output'] = output_img.copy()
 
-        plot_images(images, 6, 6, cmap='gray')
+        # intersection lines method
+        img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        images['intersec gray'] = img_gray.copy()
+        ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
+        images['intersec threshold'] = thresh.copy()
+        output_img = thresh.copy()
+
+        watershed_result = intersection_lines_marker_based_watershed_segmentation(image)
+        images['intersec watershed'] = watershed_result.copy()
+
+        char_contours, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+        thresh[mask == 0] = 0
+        images['intersec mask 1'] = mask.copy() 
+        images['intersec threshold masked 1'] = thresh.copy()
+
+        # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
+        char_contours, mask2 = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+        images['intersec mask 2'] = mask2.copy()
+        output_img[mask2 == 0] = 0
+        images['intersec threshold masked 2'] = output_img.copy()
+
+        output_img = util.invert(output_img)
+        images['intersec output'] = output_img.copy()
+
+        plot_images(images, 2, 8, cmap='gray')
         
 
     else:

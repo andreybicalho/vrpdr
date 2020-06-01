@@ -171,7 +171,19 @@ def extract_contours(image, min_contours_area_ratio=0.02, max_contours_area_rati
 
     return rois, mask
 
-def skeleton_marker_based_watershed_segmentation(image, pre_marker_img):    
+def generate_pre_marker_image(image):
+    img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+
+    structuringElement = cv.getStructuringElement(cv.MORPH_RECT, (5, 5))
+    pre_marker_img = cv.morphologyEx(img_gray, cv.MORPH_BLACKHAT, structuringElement)
+
+    ret, pre_marker_img = cv.threshold(pre_marker_img, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
+
+    return pre_marker_img
+
+def skeleton_marker_based_watershed_segmentation(image):
+    pre_marker_img = generate_pre_marker_image(image)
+
     skeleton = cv_skeletonize(pre_marker_img)
     ret, markers = cv.connectedComponents(skeleton)
     watershed_result = cv.watershed(image, markers)
@@ -182,12 +194,14 @@ def skeleton_marker_based_watershed_segmentation(image, pre_marker_img):
     
     return watershed_result
 
-def intersection_lines_marker_based_watershed_segmentation(image, pre_marker_img):
+def intersection_lines_marker_based_watershed_segmentation(image):
+    pre_marker_img = generate_pre_marker_image(image)
+
     intersection_line_img = np.zeros(pre_marker_img.shape, np.uint8)
     height, width = pre_marker_img.shape
 
-    cv.line(intersection_line_img, pt1=(0, int(height/2)), pt2=(width, int(height/2)), color=(255), thickness=3)
-    cv.line(intersection_line_img, pt1=(0, int(height/2+height/4)), pt2=(width, int(height/2+height/4)), color=(255), thickness=3)
+    cv.line(intersection_line_img, pt1=(0, int(height/2)), pt2=(width, int(height/2)), color=(255), thickness=5)
+    cv.line(intersection_line_img, pt1=(0, int(height/2+height/4)), pt2=(width, int(height/2+height/4)), color=(255), thickness=5)
     intersection_img = cv.bitwise_and(intersection_line_img, pre_marker_img)
 
     ret, markers = cv.connectedComponents(intersection_img)
@@ -200,16 +214,16 @@ def intersection_lines_marker_based_watershed_segmentation(image, pre_marker_img
     return watershed_result
     
 def extract_chars(image):
-    img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    watershed_result = skeleton_marker_based_watershed_segmentation(image)
+    #watershed_result = intersection_lines_marker_based_watershed_segmentation(image)
 
+    _, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
+
+    img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
     output_img = thresh.copy()
 
-    #watershed_result = skeleton_marker_based_watershed_segmentation(image, thresh)
-    watershed_result = intersection_lines_marker_based_watershed_segmentation(image, thresh)
-
-    _, mask = extract_contours(image=watershed_result, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
-    thresh[mask == 0] = 0    
+    thresh[mask == 0] = 0
 
     # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
     char_contours, refined_mask = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
