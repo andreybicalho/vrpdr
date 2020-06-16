@@ -13,13 +13,12 @@ from torch.utils.data import Dataset, DataLoader, Sampler
 
 from utils.tokenizer import Tokenizer
 
-
 img_trans = transforms.Compose([
     transforms.Grayscale(num_output_channels=3)
     ,transforms.ToTensor()
-    ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5))
+    ,lambda x: x < 0.7
+    ,lambda x: x.float() 
 ])
-
 
 class CaptchaDataset(Dataset):
     def __init__(self, img_width, img_height, ds_size, n_chars=4, chars=None):

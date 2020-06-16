@@ -27,6 +27,7 @@ class OCR():
 
         self._model = EMNISTNet(num_classes=num_classes)
         self._model.load_state_dict(torch.load(model_filename, map_location=self._device))
+        self._model.eval()
 
     def predict(self, inputs):
         """
@@ -40,7 +41,9 @@ class OCR():
         logging.debug(f'Tensor for prediction: {t.shape}')
 
         t.to(self._device)
-        preds = self._model(t)
+        with torch.no_grad():
+            preds = self._model(t)
+        
         preds = preds.argmax(dim=1)
         logging.debug(f'Preds shape: {preds.shape}')
 
@@ -48,4 +51,4 @@ class OCR():
         preds_classes = [self._groundtruth[idx] for idx in preds_indexes]
         pred = ''
         return pred.join([str(s) for s in preds_classes])
-    
+        

@@ -23,10 +23,17 @@ gen = ImageCaptcha(img_width, img_height)
 #    ,transforms.Normalize(mean=[0.5], std=[0.5])
 ##])
 
+#img_trans = transforms.Compose([
+#    transforms.Grayscale(num_output_channels=3)
+#    ,transforms.ToTensor()
+#    ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5))
+#])
+
 img_trans = transforms.Compose([
     transforms.Grayscale(num_output_channels=3)
     ,transforms.ToTensor()
-    ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5))
+    ,lambda x: x < 0.7
+    ,lambda x: x.float() 
 ])
 
 content = [random.randrange(0, len(chars)) for _ in range(n_chars)]

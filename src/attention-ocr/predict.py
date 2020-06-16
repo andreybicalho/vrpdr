@@ -36,13 +36,14 @@ if __name__ == '__main__':
     model = AttentionOCR(img_width, img_height, nh, tokenizer.n_token,
                 n_chars + 1, tokenizer.SOS_token, tokenizer.EOS_token).to(device=device)
 
-    model.load_state_dict(torch.load('./chkpoint/time_2020-06-13_17-16-35_epoch_8.pth'))
+    model.load_state_dict(torch.load('./chkpoint/time_2020-06-16_19-49-27_epoch_95.pth'))
 
     img_trans = transforms.Compose([
         transforms.ToPILImage()
         ,transforms.Grayscale(num_output_channels=3)
         ,transforms.ToTensor()
-        ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5))
+        ,lambda x: x < 0.7
+        ,lambda x: x.float() 
     ])
 
     if hasFrame:
