@@ -15,5 +15,9 @@ Flask==1.1.1
 imutils==0.5.3
 scikit-image==0.16.2
 tensorboard==1.14.0
-torch==1.4.0+cpu 
-torchvision==0.5.0+cpu
+torch==1.4.0
+torchvision==0.5.0
+captcha==0.3
+pycrypto==2.6.1
+tqdm==4.46.1
+Pillow==7.1.1
