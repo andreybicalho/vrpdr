@@ -40,19 +40,17 @@ if __name__ == '__main__':
 
     img_trans = transforms.Compose([
         transforms.ToPILImage()
+        ,transforms.Resize((img_height, img_width))
         ,transforms.Grayscale(num_output_channels=3)
         ,transforms.ToTensor()
-        ,lambda x: x < 0.7
+        ,lambda x: x < 0.7 # thresholding (for '<' operator input img should have white background)
         ,lambda x: x.float() 
     ])
 
     if hasFrame:
-        frame = cv.resize(frame, (img_width, img_height), interpolation = cv.INTER_AREA)
-        #frame = frame / 255
-        #t = torch.tensor(input, dtype=torch.float32)
+        print(f'Frame shape: {frame.shape}')
         t = img_trans(frame)
         print(f'tensor shape: {t.shape}')
-        #t = t.permute(2,0,1)
         print(f'unsqueezed tensor shape: {t.unsqueeze(0).shape}')
 
         model.eval()

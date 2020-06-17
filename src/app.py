@@ -9,12 +9,6 @@ from image_processing import extract_chars
 from yolo import Yolo
 from ocr import OCR
 
-import importlib
-tesseract_spec = importlib.util.find_spec("pytesseract")
-tesseract_found = tesseract_spec is not None
-if tesseract_found:
-    import pytesseract
-
 app = Flask(__name__)
 
 DEBUG = True
@@ -46,73 +40,55 @@ def run_lpr():
 
             roi_imgs = yolo.detect(inputImage)
 
-            ocr = OCR(model_filename="../config/emnist_net_custom.pt", num_classes=36, use_cuda=False, debug=DEBUG)
+            ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False, threshold=0.7)
 
             index = 0
+            api_output = []
             for roi_img in roi_imgs:
                 logging.info(f'\n\nProcessing ROI {index}')
                 box = [yolo.bounding_boxes[index][0], yolo.bounding_boxes[index][1], yolo.bounding_boxes[index][2], yolo.bounding_boxes[index][3]]
-                predict(yolo.img, roi_img, box, str(index), (0,255,0), ocr)
+                score = yolo.confidences[index]
+                pred = predict(yolo.img, roi_img, box, str(index), (0,255,0), ocr)
+
+                output = {'bounding_box' : box, 'confidence' : score, 'ocr_pred' : pred}
+                api_output.append(output)
                 
-                if(DEBUG):
-                    cv.imwrite("../debug/roi_"+str(index)+".jpg", roi_img.astype(np.uint8))
-
                 index += 1
-
-            # API response: the highest confidence one
-            logging.info(f'\n\n---Processing the Highest Confidence ROI---\n')
-            bounding_box = None
-            emnist_net_preds = None
-            tesseract_preds = None
-            if(yolo.highest_object_confidence > 0 and yolo.roi_img is not None):
-                bounding_box = {
-                    'x': yolo.box_x,
-                    'y': yolo.box_y,
-                    'w': yolo.box_w,
-                    'h': yolo.box_h
-                }                                
-                _, emnist_net_preds, tesseract_preds = predict(yolo.img, yolo.roi_img, [yolo.box_x, yolo.box_y, yolo.box_w, yolo.box_h], "", (255,255,0), ocr)                                
-                if(DEBUG):                    
-                    cv.imwrite("../debug/result.jpg", yolo.img.astype(np.uint8))
-    
-            data = {
-                'bounding_box': bounding_box,
-                'confidence': yolo.highest_object_confidence,
-                'classId': str(yolo.classId_highest_object),
-                'emnist_net_preds': emnist_net_preds,
-                'tesseract_preds': tesseract_preds
+                            
+            if(DEBUG):                 
+                cv.imwrite("../debug/result.jpg", yolo.img.astype(np.uint8))
+            
+            success, output_image = cv.imencode('.jpg', yolo.img)
+            api_response = {
+                'output_image' : base64.b64encode(output_image).decode('utf-8'),
+                'detections' : api_output
             }
-            response = jsonify(data)
+            response = jsonify(api_response)
 
     response.status_code = 200
     return response
 
-def predict(input_image, roi_img, bounding_box, prefix_label, background_color, emnist_net):
-    characteres, img, mask = extract_chars(roi_img)
+def predict(input_image, roi_img, bounding_box, prefix_label, background_color, ocr):
+    characteres, masked_img, mask = extract_chars(roi_img)
     
-    emnist_net_preds = emnist_net.predict(characteres)
+    pred = ocr.predict(masked_img)
+    logging.debug(f'\nOCR output: {pred}')
 
-    tesseract_preds = None
-    if tesseract_found:
-        tesseract_preds = pytesseract.image_to_string(img, lang='eng', config='--oem 3 --psm 13 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    
-    logging.debug(f'\nTesseract output: {tesseract_preds}\nEMNISTNet output: {emnist_net_preds}')
-
-    text = tesseract_preds if tesseract_preds is not None else emnist_net_preds
-    labelSize, baseLine = cv.getTextSize(text, cv.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+    labelSize, baseLine = cv.getTextSize(pred, cv.FONT_HERSHEY_SIMPLEX, 0.6, 2)
     x = bounding_box[0]
     y = bounding_box[1] + bounding_box[3]
     w = bounding_box[0] + round(1.1*labelSize[0])
     h = (bounding_box[1] + bounding_box[3]) + 25
     
     cv.rectangle(input_image, (x, y), (w, h), background_color, cv.FILLED)                    
-    cv.putText(input_image, text, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)
+    cv.putText(input_image, pred, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)
 
     if(DEBUG):
-        cv.imwrite("../debug/roi_masked_"+prefix_label+".jpg", img.astype(np.uint8))
+        cv.imwrite("../debug/roi_"+prefix_label+".jpg", roi_img.astype(np.uint8))
+        cv.imwrite("../debug/roi_masked_"+prefix_label+".jpg", masked_img.astype(np.uint8))
         cv.imwrite("../debug/roi_mask_"+prefix_label+".jpg", mask.astype(np.uint8))
 
-    return characteres, emnist_net_preds, tesseract_preds
+    return pred
 
 if __name__ == '__main__':
 

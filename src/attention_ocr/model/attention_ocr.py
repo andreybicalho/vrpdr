@@ -193,7 +193,7 @@ class AttentionOCR(nn.Module):
 
         self._fh = f.size(2)
         self._fw = f.size(3)
-        logging.info(f'Inception model feature size: fh: {self._fh}, fw"{self._fw}')
+        logging.info(f'Inception model feature size: fh: {self._fh}, fw: {self._fw}')
 
         self.onehot_x = OneHot(self._fh)
         self.onehot_y = OneHot(self._fw)

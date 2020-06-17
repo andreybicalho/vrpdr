@@ -221,15 +221,13 @@ def extract_chars(image):
 
     img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     ret, thresh = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV+cv.THRESH_OTSU)
-    output_img = thresh.copy()
+    out_masked_img = thresh.copy()
 
     thresh[mask == 0] = 0
 
     # we can run extract_contours again but this time on the threshold masked to get the char contours more accurate
     char_contours, refined_mask = extract_contours(image=thresh, min_contours_area_ratio=0.01, max_contours_area_ratio=0.2)
 
-    output_img[refined_mask == 0] = 0
-    # now make the image properly for tesseract (white background)
-    output_img = util.invert(output_img)
+    out_masked_img[refined_mask == 0] = 0
 
-    return char_contours, output_img, refined_mask
+    return char_contours, out_masked_img, refined_mask
