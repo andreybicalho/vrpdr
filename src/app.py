@@ -5,7 +5,6 @@ import base64
 
 import logging
 
-from image_processing import extract_chars
 from yolo import Yolo
 from ocr import OCR
 
@@ -48,10 +47,17 @@ def run_lpr():
                 logging.info(f'\n\nProcessing ROI {index}')
                 box = [yolo.bounding_boxes[index][0], yolo.bounding_boxes[index][1], yolo.bounding_boxes[index][2], yolo.bounding_boxes[index][3]]
                 score = yolo.confidences[index]
-                pred = predict(yolo.img, roi_img, box, str(index), (0,255,0), ocr)
+                
+                pred = ocr.predict(roi_img)
 
+                draw_bounding_box(input_image=yolo.img, bounding_box=box, label=pred, background_color=(0,255,0), ocr=ocr)
+                logging.info(f'\nOCR output: {pred}')
+                    
                 output = {'bounding_box' : box, 'bb_confidence' : score, 'ocr_pred' : pred}
                 api_output.append(output)
+
+                if(DEBUG):
+                    cv.imwrite("../debug/roi_"+str(index)+".jpg", roi_img.astype(np.uint8))
                 
                 index += 1
                             
@@ -68,27 +74,15 @@ def run_lpr():
     response.status_code = 200
     return response
 
-def predict(input_image, roi_img, bounding_box, prefix_label, background_color, ocr):
-    characteres, masked_img, mask = extract_chars(roi_img)
-    
-    pred = ocr.predict(masked_img)
-    logging.debug(f'\nOCR output: {pred}')
-
-    labelSize, baseLine = cv.getTextSize(pred, cv.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+def draw_bounding_box(input_image, bounding_box, label, background_color, ocr):
+    labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.6, 2)
     x = bounding_box[0]
     y = bounding_box[1] + bounding_box[3]
     w = bounding_box[0] + round(1.1*labelSize[0])
     h = (bounding_box[1] + bounding_box[3]) + 25
     
     cv.rectangle(input_image, (x, y), (w, h), background_color, cv.FILLED)                    
-    cv.putText(input_image, pred, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)
-
-    if(DEBUG):
-        cv.imwrite("../debug/roi_"+prefix_label+".jpg", roi_img.astype(np.uint8))
-        cv.imwrite("../debug/roi_masked_"+prefix_label+".jpg", masked_img.astype(np.uint8))
-        cv.imwrite("../debug/roi_mask_"+prefix_label+".jpg", mask.astype(np.uint8))
-
-    return pred
+    cv.putText(input_image, label, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)    
 
 if __name__ == '__main__':
 
