@@ -50,7 +50,7 @@ def run_lpr():
                 score = yolo.confidences[index]
                 pred = predict(yolo.img, roi_img, box, str(index), (0,255,0), ocr)
 
-                output = {'bounding_box' : box, 'confidence' : score, 'ocr_pred' : pred}
+                output = {'bounding_box' : box, 'bb_confidence' : score, 'ocr_pred' : pred}
                 api_output.append(output)
                 
                 index += 1

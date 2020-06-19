@@ -12,6 +12,8 @@ from model.attention_ocr import AttentionOCR
 from utils.tokenizer import Tokenizer
 from utils.img_util import display_images
 
+MODEL_PATH_FILE = './chkpoint/time_2020-06-19_18-24-50_epoch_12.pth'
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Usage: python predict.py --image=path/to/the/image/file.jpg')
     parser.add_argument('--image', help='Path to image file.')
@@ -25,6 +27,7 @@ if __name__ == '__main__':
 
     hasFrame, frame = cap.read()
 
+
     chars = list('1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
     img_width = 160
     img_height = 60
@@ -36,30 +39,29 @@ if __name__ == '__main__':
     model = AttentionOCR(img_width, img_height, nh, tokenizer.n_token,
                 n_chars + 1, tokenizer.SOS_token, tokenizer.EOS_token).to(device=device)
 
-    model.load_state_dict(torch.load('./chkpoint/time_2020-06-16_19-49-27_epoch_95.pth'))
+    model.load_state_dict(torch.load(MODEL_PATH_FILE))
 
     img_trans = transforms.Compose([
         transforms.ToPILImage()
         ,transforms.Resize((img_height, img_width))
         ,transforms.Grayscale(num_output_channels=3)
         ,transforms.ToTensor()
-        ,lambda x: x < 0.7 # thresholding (for '<' operator input img should have white background)
-        ,lambda x: x.float() 
+        ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5)) 
     ])
 
     if hasFrame:
         print(f'Frame shape: {frame.shape}')
-        t = img_trans(frame)
-        print(f'tensor shape: {t.shape}')
-        print(f'unsqueezed tensor shape: {t.unsqueeze(0).shape}')
+        img = img_trans(frame)
+        print(f'tensor shape: {img.shape}')
+        print(f'unsqueezed tensor shape: {img.unsqueeze(0).shape}')
 
         model.eval()
-        with torch.no_grad():            
-            pred = model(t.unsqueeze(0))
+        with torch.no_grad():
+            pred = model(img.unsqueeze(0))
     
-        rst = tokenizer.translate(pred.squeeze(0).argmax(1))
-        print(rst)
+        pred = tokenizer.translate(pred.squeeze(0).argmax(1))
+        print(f'prediction: {pred}')
 
-        display_images(t.numpy(), 1, 3)
+        display_images(img.numpy(), 1, 3)
     else:
         print("Frame not found!")

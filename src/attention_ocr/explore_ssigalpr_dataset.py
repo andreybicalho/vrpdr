@@ -9,7 +9,7 @@ from torchvision import transforms
 
 from PIL import Image
 
-ANNOTADED_FILE = 'ssigalpr_samples/train.csv'
+ANNOTADED_FILE = 'ssigalpr_samples/test_train.csv'
 IMG_DIR = 'ssigalpr_samples/train/'
 
 IMG_WIDTH = 160
@@ -36,8 +36,9 @@ if __name__ == '__main__':
     annotaded_data = df.iloc[0]
 
     img_id = annotaded_data.iloc[0]
+    print(f'image: {img_id}.png')    
     img = Image.open(IMG_DIR+img_id+'.png')
-    #img.show()
+    img.show()
 
     width, height = img.size
     x0 = annotaded_data.iloc[1] * width
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     print(f'label: {label}')
 
     roi = img.crop((x0, y0, x1, y1))
-    #roi.show()
+    roi.show()
 
     t = img_trans(roi)
     display_images(t.numpy(), 1, 3)

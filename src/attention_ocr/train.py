@@ -15,16 +15,18 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from model.attention_ocr import AttentionOCR
-from utils.dataset import CaptchaDataset, SSIGALPRDataset
+from utils.dataset import SSIGALPRDataset
 from utils.train_util import train_batch, eval_batch
 
-ROOT_TRAIN_IMG_DIR = 'E:\\dev\\h6f86gl\\final\\test_train'
-ANNOTADED_TRAIN_FILE = 'test_train.csv'
-ROOT_VAL_IMG_DIR = 'E:\\dev\\h6f86gl\\final\\val'
-ANNOTADED_VAL_FILE = 'val.csv'
+ROOT_TRAIN_IMG_DIR = 'F:\\dev\\ssigalpr_dataset\\test_train'
+ANNOTADED_TRAIN_FILE = 'ssigalpr_samples/test_train.csv'
+ROOT_VAL_IMG_DIR = 'F:\\dev\\ssigalpr_dataset\\val'
+ANNOTADED_VAL_FILE = 'ssigalpr_samples/val.csv'
 
 
-def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_len=4, batch_size=32, n_works=4, save_checkpoint_every=5, device='cuda'):
+def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_len=4, batch_size=32, n_works=4, 
+         save_checkpoint_every=5, device='cuda', train_labels_path=ANNOTADED_TRAIN_FILE, train_root_img_dir=ROOT_TRAIN_IMG_DIR, 
+         test_labels_path=ANNOTADED_VAL_FILE, test_root_img_dir=ROOT_VAL_IMG_DIR):
     img_width = 160
     img_height = 60
     nh = 512
@@ -32,10 +34,8 @@ def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_
     teacher_forcing_ratio = 0.5    
     lr = 3e-4    
 
-    #ds_train = CaptchaDataset(img_width, img_height, 10000, max_len)
-    #ds_test = CaptchaDataset(img_width, img_height, 1000, max_len)
-    ds_train = SSIGALPRDataset(img_width, img_height, n_chars=7, labels_path=ANNOTADED_TRAIN_FILE, root_img_dir=ROOT_TRAIN_IMG_DIR)
-    ds_test = SSIGALPRDataset(img_width, img_height, n_chars=7, labels_path=ANNOTADED_VAL_FILE, root_img_dir=ROOT_VAL_IMG_DIR)
+    ds_train = SSIGALPRDataset(img_width, img_height, n_chars=7, labels_path=train_labels_path, root_img_dir=train_root_img_dir)
+    ds_test = SSIGALPRDataset(img_width, img_height, n_chars=7, labels_path=test_labels_path, root_img_dir=test_root_img_dir)
 
     tokenizer = ds_train.tokenizer
 
@@ -121,7 +121,7 @@ def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Usage: python train_.py --inception=\'./inception_v3_google-1a9a5a14.pth\' --e=1 --cuda')
     parser.add_argument('--e', type=int, nargs='?', const=100, default=100, help='Number of epochs to train the model')
-    parser.add_argument('--l', type=int, nargs='?', const=7, default=7, help='Max number of characters in captcha')
+    parser.add_argument('--l', type=int, nargs='?', const=7, default=7, help='Max number of characters in the image')
     parser.add_argument('--c', type=int, nargs='?', const=5, default=5, help='Save model every given number of epochs (checkpoint)')
     parser.add_argument('--w', type=int, nargs='?', const=4, default=4, help='Number of workers')
     parser.add_argument('--cuda', action='store_true', default=False, help='Use CUDA')
@@ -141,4 +141,6 @@ if __name__ == '__main__':
     print(f'Inception model: {INCEPTION_MODEL}')
 
     main(inception_model=INCEPTION_MODEL, n_epoch=NUM_EPOCHS, max_len=MAX_LEN, n_works=N_WORKERS, 
-        save_checkpoint_every=CHECKPOINT, device=DEVICE)
+        save_checkpoint_every=CHECKPOINT, device=DEVICE, 
+        train_labels_path=ANNOTADED_TRAIN_FILE, train_root_img_dir=ROOT_TRAIN_IMG_DIR,
+        test_labels_path=ANNOTADED_VAL_FILE, test_root_img_dir=ROOT_VAL_IMG_DIR)

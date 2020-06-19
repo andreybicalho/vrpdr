@@ -24,8 +24,7 @@ class OCR():
             ,transforms.Resize((self.img_height, self.img_width))
             ,transforms.Grayscale(num_output_channels=3)
             ,transforms.ToTensor()
-            ,lambda x: x < threshold # thresholding (for '<' operator input image should have white background)
-            ,lambda x: x.float() 
+            ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5)) 
         ])
 
         self.device = torch.device('cuda' if torch.cuda.is_available() and use_cuda else 'cpu')
