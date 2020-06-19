@@ -7,11 +7,9 @@ data/*
 */data/*
 config/*
 */runs/*
-*/EMNISTNet/data/*
-*/EMNISTNet/custom_dataset/*
-*/EMNISTNet/mini_custom_dataset/*
 runs/
 debug/*
+ssigalpr_samples/
 #*.jpg
 #*.JPG
 #*.jpeg

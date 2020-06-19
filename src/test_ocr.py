@@ -6,33 +6,52 @@ import os.path
 import logging
 import matplotlib.pyplot as plt
 
-from image_preprocessing import display_images, extract_chars
 from ocr import OCR
+
+def plot_images(data, rows, cols, cmap='gray'):
+    if(len(data) > 0):
+        i = 0
+        for title, image in data.items():
+            #logging.debug(title)    
+            plt.subplot(rows,cols,i+1),plt.imshow(image,cmap)
+            plt.title(title)
+            plt.xticks([]),plt.yticks([])
+            i += 1
+        plt.show()
+
+def display_images(img_list, row, col):
+    if(len(img_list) > 0):
+        images = {}
+        n = 0
+        for img in img_list:
+            n += 1
+            images[str(n)] = img
+        plot_images(images, row, col, cmap='gray')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Testing OCR.')
     parser.add_argument('--image', help='Path to image file.')
     args = parser.parse_args()
 
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
 
     # Open the image file
     if not os.path.isfile(args.image):
-        logging.debug("Input image file ", args.image, " doesn't exist")
+        logging.error("Input image file ", args.image, " doesn't exist")
         sys.exit(1)
     cap = cv.VideoCapture(args.image)
 
     hasFrame, frame = cap.read()
 
     if hasFrame:
-        img, characteres = extract_chars(frame, prefix_label='test_ocr', min_countours_area_ration=0.01, debug=True)
+        images = {}
+        images['frame'] = frame
 
-        #characteres = [img / 255 for img in characteres]
-        #display_images(characteres, 3, 3)
+        ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False, threshold=0.7)
+        pred = ocr.predict(frame)
+        logging.info(f'Prediction: {pred}')
 
-        ocr = OCR(model_filename="../config/emnist_model.pt", use_cuda=False, debug=True)
-        pred = ocr.predict(characteres)
-        logging.info(f'\nPrediction: {pred}')
+        plot_images(images, 1, 3, cmap='gray')
         
     else:
         logging.debug("Frame not found!")
