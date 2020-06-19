@@ -44,5 +44,4 @@ d = Image.open(d)
 t = img_trans(d)
 print(f'\ntensor shape{t.shape}')
 
-
 display_images(t.numpy(), 1, 3)

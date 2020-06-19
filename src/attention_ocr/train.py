@@ -15,8 +15,14 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from model.attention_ocr import AttentionOCR
-from utils.dataset import CaptchaDataset
+from utils.dataset import CaptchaDataset, SSIGALPRDataset
 from utils.train_util import train_batch, eval_batch
+
+ROOT_TRAIN_IMG_DIR = 'E:\\dev\\h6f86gl\\final\\test_train'
+ANNOTADED_TRAIN_FILE = 'test_train.csv'
+ROOT_VAL_IMG_DIR = 'E:\\dev\\h6f86gl\\final\\val'
+ANNOTADED_VAL_FILE = 'val.csv'
+
 
 def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_len=4, batch_size=32, n_works=4, save_checkpoint_every=5, device='cuda'):
     img_width = 160
@@ -26,8 +32,10 @@ def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_
     teacher_forcing_ratio = 0.5    
     lr = 3e-4    
 
-    ds_train = CaptchaDataset(img_width, img_height, 10000, max_len)
-    ds_test = CaptchaDataset(img_width, img_height, 1000, max_len)
+    #ds_train = CaptchaDataset(img_width, img_height, 10000, max_len)
+    #ds_test = CaptchaDataset(img_width, img_height, 1000, max_len)
+    ds_train = SSIGALPRDataset(img_width, img_height, n_chars=7, labels_path=ANNOTADED_TRAIN_FILE, root_img_dir=ROOT_TRAIN_IMG_DIR)
+    ds_test = SSIGALPRDataset(img_width, img_height, n_chars=7, labels_path=ANNOTADED_VAL_FILE, root_img_dir=ROOT_VAL_IMG_DIR)
 
     tokenizer = ds_train.tokenizer
 
