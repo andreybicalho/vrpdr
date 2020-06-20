@@ -5,7 +5,7 @@ from utils.tokenizer import Tokenizer
 from utils.dataset import SSIGALPRDataset
 from utils.img_util import display_images
 
-MODEL_PATH_FILE = './chkpoint/time_2020-06-19_18-24-50_epoch_12.pth'
+MODEL_PATH_FILE = '../../config/attention_ocr_model.pth'
 ROOT_IMG_PATH = 'ssigalpr_samples/val/'
 ANNOTADED_FILE = 'ssigalpr_samples/val.csv'
 
@@ -13,6 +13,7 @@ img_width = 160
 img_height = 60
 nh = 512
 chars = list('1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+print(f'char size: {len(chars)}')
 n_chars = 7
 device = 'cpu'
 
@@ -31,7 +32,10 @@ print(f'unsqueezed tensor shape: {img.unsqueeze(0).shape}')
 model.eval()
 with torch.no_grad():
     pred = model(img.unsqueeze(0))
-    
+
+print(f'pred shape: {pred.shape}') 
+print(f'pred squeeze shape: {pred.squeeze(0).shape}')
+print(f'pred squeeze argmax: {pred.squeeze(0).argmax(1)}')
 pred = tokenizer.translate(pred.squeeze(0).argmax(1))
 print(f'groundtruth: {tokenizer.translate(label)}\nprediction: {pred}')
 

@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('--image', help='Path to image file.')
     args = parser.parse_args()
 
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # Open the image file
     if not os.path.isfile(args.image):

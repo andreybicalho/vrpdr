@@ -12,12 +12,7 @@ class Yolo:
                 classes_filename="config/classes.names", 
                 model_architecture_filename="config/darknet-yolov3.cfg", model_weights_filename="config/darknet-yolov3-weights.weights", 
                 output_directory="debug/", confidence_threshold=0.5, non_max_supress_theshold=0.4,
-                debug=True):
-        
-        if(debug):
-            logging.getLogger().setLevel(logging.DEBUG)
-        else:
-            logging.getLogger().setLevel(logging.INFO)
+                output_image=True):
 
         self.img = None
         self.class_ids = []
@@ -29,7 +24,7 @@ class Yolo:
         self.classId_highest_object = None
         self.inference_time = -1.0
         self.output_directory = output_directory
-        self._debug = debug
+        self.output_image = output_image
         
         self._classes = None
         self._inputImgWidth = img_width  # Width of network's input image
@@ -41,7 +36,7 @@ class Yolo:
 
 
     def load_net(self, classes_filename, model_architecture_filename, model_weights_filename):
-        logging.info("\n\nLoading YOLO v3 Architecture Configuration...")
+        logging.debug("Loading YOLO v3...")
 
         with open(classes_filename, 'rt') as f:
             self._classes = f.read().rstrip('\n').split('\n')
@@ -70,7 +65,7 @@ class Yolo:
         """ 
         Remove the bounding boxes with low confidence using non-maximum suppression. 
         """
-        logging.info("\nRunning Non Maximum Suppression to remove low confidence boxes...\n")
+        logging.debug("\nRunning Non Maximum Suppression to remove low confidence boxes...\n")
 
         frameHeight = input_image.shape[0]
         frameWidth = input_image.shape[1]
@@ -139,10 +134,9 @@ class Yolo:
 
 
     def detect(self, input_image):
-        logging.info("\nYOLO object detector is running...")
+        logging.debug("\nYOLO object detector is running...")
 
-        # cache 
-        self.img = input_image.copy()
+        self.img = input_image
 
         # Create a 4D blob from a frame.
         blob = cv.dnn.blobFromImage(input_image, 1/255, (self._inputImgWidth, self._inputImgHeight), [0,0,0], 1, crop=False)
@@ -156,7 +150,7 @@ class Yolo:
         # The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
         t, _ = self._net.getPerfProfile()
         self.inference_time = t * 1000.0 / cv.getTickFrequency()
-        logging.info(f"Inference time: {self.inference_time} ms")
+        logging.debug(f"Inference time: {self.inference_time} ms")
 
         # Remove the bounding boxes with low confidence
         self.non_max_supression(self.img, netOutputs)        
@@ -171,12 +165,12 @@ class Yolo:
                 self.roi_imgs.append(input_image[box_y:box_y+box_h, box_x:box_x+box_w].copy())                    
 
         # the highest confidence ROI
-        if(self.highest_object_confidence > 0):
-            # ROI
-            self.roi_img = input_image[self.box_y:self.box_y+self.box_h, self.box_x:self.box_x+self.box_w].copy()
-            self.draw_bounding_box(self.img, self.classId_highest_object, self.highest_object_confidence, self.box_x, self.box_y, self.box_x + self.box_w, self.box_y + self.box_h, color=(255,255,0), thickness=2)            
+        #if(self.highest_object_confidence > 0):
+        #    # ROI
+        #    self.roi_img = input_image[self.box_y:self.box_y+self.box_h, self.box_x:self.box_x+self.box_w].copy()
+        #    self.draw_bounding_box(self.img, self.classId_highest_object, self.highest_object_confidence, self.box_x, self.box_y, self.box_x + self.box_w, self.box_y + self.box_h, color=(255,255,0), thickness=2)            
         
-        if self._debug:
+        if self.output_image:
             cv.imwrite(self.output_directory+"YOLO.jpg", self.img.astype(np.uint8))              
 
         return self.roi_imgs
@@ -199,3 +193,14 @@ class Yolo:
         top = max(start_point_y, label_size[1])
         cv.rectangle(image, (start_point_x, top - round(1.1*label_size[1])), (start_point_x + round(1.1*label_size[0]), top + base_line), color, cv.FILLED)
         cv.putText(image, label, (start_point_x, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), thickness)
+
+    def clear(self):
+        self.img = None
+        self.class_ids = []
+        self.confidences = []
+        self.bounding_boxes = []
+        self.roi_img = None
+        self.roi_imgs = []
+        self.highest_object_confidence = -1.0
+        self.classId_highest_object = None
+        self.inference_time = -1.0

@@ -12,6 +12,17 @@ app = Flask(__name__)
 
 DEBUG = True
 
+# TODO: state management and how to handle multiple request on this?
+yolo = Yolo(img_width=1056, img_height=576, 
+            confidence_threshold=0.6, non_max_supress_theshold=0.4,
+            classes_filename='../config/classes.names',
+            model_architecture_filename="../config/yolov3_license_plates.cfg", 
+            model_weights_filename="../config/yolov3_license_plates_last.weights",
+            output_directory='../debug/',
+            output_image=True)
+
+ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False, threshold=0.7)
+
 @app.route('/')
 def index():
     return "Live and Running!"
@@ -29,29 +40,19 @@ def run_lpr():
             nparr = np.fromstring(img_bytes, np.uint8)
             inputImage = cv.imdecode(nparr, cv.IMREAD_COLOR)
 
-            # TODO: state management: avoid loading net for every request
-            yolo = Yolo(img_width=1056, img_height=576, 
-                        debug=DEBUG, confidence_threshold=0.6, non_max_supress_theshold=0.4,
-                        classes_filename='../config/classes.names',
-                        model_architecture_filename="../config/yolov3_license_plates.cfg", 
-                        model_weights_filename="../config/yolov3_license_plates_last.weights",
-                        output_directory='../debug/')                   
-
             roi_imgs = yolo.detect(inputImage)
-
-            ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False, threshold=0.7)
 
             index = 0
             api_output = []
             for roi_img in roi_imgs:
-                logging.info(f'\n\nProcessing ROI {index}')
+                logging.info(f'Processing ROI {index}')
                 box = [yolo.bounding_boxes[index][0], yolo.bounding_boxes[index][1], yolo.bounding_boxes[index][2], yolo.bounding_boxes[index][3]]
                 score = yolo.confidences[index]
                 
                 pred = ocr.predict(roi_img)
 
                 draw_bounding_box(input_image=yolo.img, bounding_box=box, label=pred, background_color=(0,255,0), ocr=ocr)
-                logging.info(f'\nOCR output: {pred}')
+                logging.info(f'OCR output: {pred}')
                     
                 output = {'bounding_box' : box, 'bb_confidence' : score, 'ocr_pred' : pred}
                 api_output.append(output)
@@ -70,6 +71,8 @@ def run_lpr():
                 'detections' : api_output
             }
             response = jsonify(api_response)
+    
+            yolo.clear()
 
     response.status_code = 200
     return response

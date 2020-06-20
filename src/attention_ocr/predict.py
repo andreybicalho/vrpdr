@@ -12,7 +12,7 @@ from model.attention_ocr import AttentionOCR
 from utils.tokenizer import Tokenizer
 from utils.img_util import display_images
 
-MODEL_PATH_FILE = './chkpoint/time_2020-06-19_18-24-50_epoch_12.pth'
+MODEL_PATH_FILE = '../../config/attention_ocr_model.pth'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Usage: python predict.py --image=path/to/the/image/file.jpg')
@@ -44,9 +44,8 @@ if __name__ == '__main__':
     img_trans = transforms.Compose([
         transforms.ToPILImage()
         ,transforms.Resize((img_height, img_width))
-        ,transforms.Grayscale(num_output_channels=3)
         ,transforms.ToTensor()
-        ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5)) 
+        ,transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) 
     ])
 
     if hasFrame:

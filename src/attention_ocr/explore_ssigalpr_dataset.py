@@ -9,7 +9,7 @@ from torchvision import transforms
 
 from PIL import Image
 
-ANNOTADED_FILE = 'ssigalpr_samples/test_train.csv'
+ANNOTADED_FILE = 'ssigalpr_samples/train.csv'
 IMG_DIR = 'ssigalpr_samples/train/'
 
 IMG_WIDTH = 160
@@ -19,10 +19,9 @@ CHARS = list('1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
 
 img_trans = transforms.Compose([
-    transforms.Resize((IMG_HEIGHT, IMG_WIDTH))
-    ,transforms.Grayscale(num_output_channels=3)
+     transforms.Resize((IMG_HEIGHT, IMG_WIDTH))
     ,transforms.ToTensor()
-    ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5)) 
+    ,transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) 
 ])
 
 if __name__ == '__main__':    

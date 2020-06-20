@@ -20,20 +20,20 @@ class OCR():
         self.chars = list('1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
         self.img_trans = transforms.Compose([
-            transforms.ToPILImage()
+             transforms.ToPILImage()
             ,transforms.Resize((self.img_height, self.img_width))
-            ,transforms.Grayscale(num_output_channels=3)
             ,transforms.ToTensor()
-            ,transforms.Normalize(mean=[0.5, 0.5, 0.5], std=(0.5, 0.5, 0.5)) 
-        ])
+            ,transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) 
+        ])        
 
         self.device = torch.device('cuda' if torch.cuda.is_available() and use_cuda else 'cpu')
-        logging.info(f'Using {self.device} device.')
+        logging.debug(f'Using {self.device} device for Attention OCR.')
 
         self.tokenizer = Tokenizer(self.chars)
         self.model = AttentionOCR(self.img_width, self.img_height, self.nh, self.tokenizer.n_token,
                 n_chars + 1, self.tokenizer.SOS_token, self.tokenizer.EOS_token).to(device=self.device)
 
+        logging.debug("Loading Attention OCR...")
         self.model.load_state_dict(torch.load(model_filename, map_location=self.device))
         self.model.eval()
 
