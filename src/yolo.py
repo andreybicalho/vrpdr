@@ -61,7 +61,7 @@ class Yolo:
         return [layersNames[i[0] - 1] for i in self._net.getUnconnectedOutLayers()]
 
     
-    def non_max_supression(self, input_image, net_outputs):
+    def non_max_supression(self, input_image, net_outputs, draw_bounding_box=True):
         """ 
         Remove the bounding boxes with low confidence using non-maximum suppression. 
         """
@@ -115,12 +115,13 @@ class Yolo:
             self.class_ids.append(classId)
             self.confidences.append(conf)
 
-            # draw bounding box
             box_x = box[0]
             box_y = box[1]
             box_w = box[2]
             box_h = box[3]
-            self.draw_bounding_box(self.img, classId, conf, box_x, box_y, box_x + box_w, box_y + box_h)
+            
+            if draw_bounding_box:
+                self.draw_bounding_box(self.img, classId, conf, box_x, box_y, box_x + box_w, box_y + box_h)
             
             # keep a special one: the one with the highest confidence            
             if conf > self.highest_object_confidence:
@@ -133,7 +134,7 @@ class Yolo:
                 self.classId_highest_object = classId
 
 
-    def detect(self, input_image):
+    def detect(self, input_image, draw_bounding_box=True):
         logging.debug("\nYOLO object detector is running...")
 
         self.img = input_image
@@ -153,7 +154,7 @@ class Yolo:
         logging.debug(f"Inference time: {self.inference_time} ms")
 
         # Remove the bounding boxes with low confidence
-        self.non_max_supression(self.img, netOutputs)        
+        self.non_max_supression(self.img, netOutputs, draw_bounding_box)        
 
         # get roi for every bounding box
         if len(self.confidences) > 0:
@@ -171,13 +172,12 @@ class Yolo:
         #    self.draw_bounding_box(self.img, self.classId_highest_object, self.highest_object_confidence, self.box_x, self.box_y, self.box_x + self.box_w, self.box_y + self.box_h, color=(255,255,0), thickness=2)            
         
         if self.output_image:
-            cv.imwrite(self.output_directory+"YOLO.jpg", self.img.astype(np.uint8))              
+            cv.imwrite(self.output_directory+"YOLO.jpg", self.img.astype(np.uint8))          
 
         return self.roi_imgs
 
 
     def draw_bounding_box(self, image, class_id, confidence, start_point_x, start_point_y, end_point_x, end_point_y, color=(0, 255, 0), thickness=2):
-        # draw rectangle
         cv.rectangle(image, (start_point_x, start_point_y), (end_point_x, end_point_y), color, thickness)
 
         confidence *= 100

@@ -40,7 +40,7 @@ def run_lpr():
             nparr = np.fromstring(img_bytes, np.uint8)
             inputImage = cv.imdecode(nparr, cv.IMREAD_COLOR)
 
-            roi_imgs = yolo.detect(inputImage)
+            roi_imgs = yolo.detect(inputImage, draw_bounding_box=False)
 
             index = 0
             api_output = []
@@ -48,10 +48,11 @@ def run_lpr():
                 logging.info(f'Processing ROI {index}')
                 box = [yolo.bounding_boxes[index][0], yolo.bounding_boxes[index][1], yolo.bounding_boxes[index][2], yolo.bounding_boxes[index][3]]
                 score = yolo.confidences[index]
+                class_id = yolo.class_ids[index]
                 
                 pred = ocr.predict(roi_img)
 
-                draw_bounding_box(input_image=yolo.img, bounding_box=box, label=pred, background_color=(0,255,0), ocr=ocr)
+                draw_bounding_box(input_image=yolo.img, class_id=class_id, bounding_box=box, box_score=score, prediction=pred, background_color=(0,255,0))
                 logging.info(f'OCR output: {pred}')
                     
                 output = {'bounding_box' : box, 'bb_confidence' : score, 'ocr_pred' : pred}
@@ -77,15 +78,17 @@ def run_lpr():
     response.status_code = 200
     return response
 
-def draw_bounding_box(input_image, bounding_box, label, background_color, ocr):
-    labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+def draw_bounding_box(input_image, class_id, bounding_box, box_score, prediction, background_color):
+    labelSize, baseLine = cv.getTextSize(prediction, cv.FONT_HERSHEY_SIMPLEX, 0.6, 2)
     x = bounding_box[0]
     y = bounding_box[1] + bounding_box[3]
     w = bounding_box[0] + round(1.1*labelSize[0])
     h = (bounding_box[1] + bounding_box[3]) + 25
     
+    yolo.draw_bounding_box(input_image, class_id, box_score, bounding_box[0], bounding_box[1], bounding_box[0]+bounding_box[2], bounding_box[1]+bounding_box[3])
+
     cv.rectangle(input_image, (x, y), (w, h), background_color, cv.FILLED)                    
-    cv.putText(input_image, label, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)    
+    cv.putText(input_image, prediction, (x+5, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 2)
 
 if __name__ == '__main__':
 
