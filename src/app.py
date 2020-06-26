@@ -21,7 +21,7 @@ yolo = Yolo(img_width=1056, img_height=576,
             output_directory='../debug/',
             output_image=True)
 
-ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False, threshold=0.7)
+ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False)
 
 @app.route('/')
 def index():

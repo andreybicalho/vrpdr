@@ -12,7 +12,7 @@ class OCR():
     Optical Character Recognition (OCR) aims to recognize characters from images.
     """
 
-    def __init__(self, model_filename="config/attention_ocr_model.pth", use_cuda=False, n_chars=7, threshold=0.7):
+    def __init__(self, model_filename="config/attention_ocr_model.pth", use_cuda=False, n_chars=7):
         self.img_width = 160
         self.img_height = 60
         self.nh = 512

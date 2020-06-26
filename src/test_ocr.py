@@ -47,7 +47,7 @@ if __name__ == '__main__':
         images = {}
         images['frame'] = frame
 
-        ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False, threshold=0.7)
+        ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False)
         pred = ocr.predict(frame)
         logging.info(f'Prediction: {pred}')
 

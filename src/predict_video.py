@@ -23,14 +23,14 @@ if __name__ == '__main__':
     out = cv.VideoWriter(args.out, fourcc, 30.0, (1920,1080), True)
 
     yolo = Yolo(img_width=1056, img_height=576, 
-                confidence_threshold=0.6, non_max_supress_theshold=0.4,
+                confidence_threshold=0.85, non_max_supress_theshold=0.7,
                 classes_filename='../config/classes.names',
-                model_architecture_filename="../config/yolov3_license_plates_tiny.cfg", 
-                model_weights_filename="../config/yolov3_license_plates_tiny_best.weights",
+                model_architecture_filename="../config/yolov3_license_plates.cfg", 
+                model_weights_filename="../config/yolov3_license_plates_last.weights",
                 output_directory='../debug/',
                 output_image=False)                   
     
-    ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False, threshold=0.7)
+    ocr = OCR(model_filename="../config/attention_ocr_model.pth", use_cuda=False)
 
     cap = cv.VideoCapture(args.input)
 
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         hasFrame, frame = cap.read()
         if hasFrame:
             frame_count += 1
-            if frame_count % 10 == 0:
+            if frame_count % 2 == 0:
                 roi_imgs = yolo.detect(frame, draw_bounding_box=False)
                 index = 0
                 for roi_img in roi_imgs:
