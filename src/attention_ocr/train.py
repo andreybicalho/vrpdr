@@ -106,11 +106,12 @@ def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_
         return sum_loss_eval / n_eval, sum_acc / n_eval, sum_sentence_acc / n_eval
 
     for epoch in range(n_epoch):
-        train_loss, train_acc, train_sentence_acc = train_epoch()
-        eval_loss, eval_acc, eval_sentence_acc = eval_epoch()
+        print("\nEpoch %d" % epoch)
 
-        print("Epoch %d" % epoch)
+        train_loss, train_acc, train_sentence_acc = train_epoch()
         print('train_loss: %.4f, train_acc: %.4f, train_sentence: %.4f' % (train_loss, train_acc, train_sentence_acc))
+
+        eval_loss, eval_acc, eval_sentence_acc = eval_epoch()
         print('eval_loss:  %.4f, eval_acc:  %.4f, eval_sentence:  %.4f' % (eval_loss, eval_acc, eval_sentence_acc))
 
         if epoch % save_checkpoint_every == 0 and epoch > 0:
@@ -119,11 +120,12 @@ def main(inception_model='./inception_v3_google-1a9a5a14.pth', n_epoch=100, max_
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Usage: python train_.py --inception=\'./inception_v3_google-1a9a5a14.pth\' --e=1 --cuda')
+    parser = argparse.ArgumentParser(description='Usage: python train.py --inception=\'./inception_v3_google-1a9a5a14.pth\' --e=1 --cuda')
     parser.add_argument('--e', type=int, nargs='?', const=100, default=100, help='Number of epochs to train the model')
     parser.add_argument('--l', type=int, nargs='?', const=7, default=7, help='Max number of characters in the image')
     parser.add_argument('--c', type=int, nargs='?', const=5, default=5, help='Save model every given number of epochs (checkpoint)')
     parser.add_argument('--w', type=int, nargs='?', const=4, default=4, help='Number of workers')
+    parser.add_argument('--b', type=int, nargs='?', const=32, default=32, help='Batch size')
     parser.add_argument('--cuda', action='store_true', default=False, help='Use CUDA')
     parser.add_argument('--inception', help='Path to the inception model')
     args = parser.parse_args()
@@ -136,11 +138,14 @@ if __name__ == '__main__':
     DEVICE = 'cuda' if args.cuda else 'cpu'
     N_WORKERS = args.w if args.w is not None else 6
     INCEPTION_MODEL = args.inception if args.inception is not None else './inception_v3_google-1a9a5a14.pth'
+    BATCH_SIZE = args.b if args is not None else 32
 
-    print(f'Device: {DEVICE} {args.cuda}\nEpochs: {NUM_EPOCHS}\nChar length: {MAX_LEN}\nCheckpoint every: {CHECKPOINT} epochs\nNumber of workers: {N_WORKERS}')
-    print(f'Inception model: {INCEPTION_MODEL}')
+    print(f'Device: {DEVICE} {args.cuda}\nEpochs: {NUM_EPOCHS}\nChar length: {MAX_LEN}')
+    print(f'Checkpoint every: {CHECKPOINT} epochs\nNumber of workers: {N_WORKERS}')
+    print(f'Batch size: {BATCH_SIZE}\nInception model: {INCEPTION_MODEL}')
 
     main(inception_model=INCEPTION_MODEL, n_epoch=NUM_EPOCHS, max_len=MAX_LEN, n_works=N_WORKERS, 
         save_checkpoint_every=CHECKPOINT, device=DEVICE, 
         train_labels_path=ANNOTADED_TRAIN_FILE, train_root_img_dir=ROOT_TRAIN_IMG_DIR,
-        test_labels_path=ANNOTADED_VAL_FILE, test_root_img_dir=ROOT_VAL_IMG_DIR)
+        test_labels_path=ANNOTADED_VAL_FILE, test_root_img_dir=ROOT_VAL_IMG_DIR,
+        batch_size=BATCH_SIZE)

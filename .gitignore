@@ -25,7 +25,6 @@ log*.txt
 *.zip
 *.xls
 *.db
-*.gif
 *.pt
 *.csv
 *.json

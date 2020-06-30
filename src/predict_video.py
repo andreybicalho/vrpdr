@@ -39,7 +39,7 @@ if __name__ == '__main__':
         hasFrame, frame = cap.read()
         if hasFrame:
             frame_count += 1
-            if frame_count % 2 == 0:
+            if frame_count % 2 == 0: # process every other frame to save time
                 roi_imgs = yolo.detect(frame, draw_bounding_box=False)
                 index = 0
                 for roi_img in roi_imgs:

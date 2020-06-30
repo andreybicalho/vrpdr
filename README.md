@@ -4,42 +4,44 @@
 
 # What's this repo about?
 
-This is a simple approach for vehicle registration plate detection and recognition. It is not an end-to-end system, instead, two different deep learning methods were stacked together to complete this task. [*YOLO*](https://github.com/AlexeyAB/darknet) object detection algorithm was used to detect license plate regions, then an `Attention Based Optical Character Recognition` [*Attention-OCR*](https://github.com/wptoux/attention-ocr) was applied to recognize the characters.
+This is a simple approach for vehicle registration plate detection and recognition. It is not an end-to-end system, instead, two different deep learning methods were stacked together to complete this task. `You Only Look Once` ([*YOLO*](https://github.com/AlexeyAB/darknet)) object detection algorithm was used to detect license plate regions, then an `Attention Based Optical Character Recognition`, [*Attention-OCR*](https://github.com/wptoux/attention-ocr), was applied to recognize the characters.
 
-![Output](docs/result.jpg "Output")*Results (vehicle license plate and recognized characters were intentionally blurred).*
+![](docs/example.gif)
 
-# Install and Requirements
+# Running
+
+Make sure you have all the dependencies installed:
 
 ````
 pip install -r requirements.txt
 ````
 
-## Pre-trained Weights
+Both *YOLO* and *Attention-OCR* were trained on the Brazilian [SSIG-ALPR](http://smartsenselab.dcc.ufmg.br/en/dataset/banco-de-dados-sense-alpr/) dataset:
 
-Download the pre-trained weights for the YOLO and the Attention-OCR and put it in the `config` directory.
+* Images were resized to 1056x576 during training, so YOLO will perform best if applied to this shape.
+* Cropped bounding box images (i.e. license plates) were resized to 160x60 to train the Attention-OCR.
 
-* *YOLO* and *Attention-OCR* were trained on the Brazilian [SSIG-ALPR](http://smartsenselab.dcc.ufmg.br/en/dataset/banco-de-dados-sense-alpr/) dataset.
-  * `TODO:` upload weights and other config files somewhere.
+Download the pretrained models and put it in the `config` directory. 
 
-# Running
+* `TODO:` upload weights and other config files somewhere.
 
-Run the application API:
+Run the application service:
 ````
 python app.py
 ````
 
-The app will be listening to requests on http://localhost:5000/
+The application service will be listening to requests on http://localhost:5000/
 
-Send an Http POST request with a form-data body with an attribute `file` containing the image, like this:
+Send an Http POST request with a form-data body with an attribute `file` containing the image, like this `curl` example:
 
 ````
 curl --location --request POST 'localhost:5000/' \
 --form 'file=@/path/to/the/image/file/image_file.png'
 ````
 
-### API Output:
+# Output
 
-The API will output all the detections with the corresponding bounding boxes and its confidence scores as well as the OCR prediction for each bounding box. Also, we draw all these information on the input image and outputs it as a base64 image.
+The API will output all the detections with the corresponding bounding boxes and its confidence scores as well as the OCR prediction for each bounding box. Also, we draw all these information on the input image and also outputs it as a base64 image.
 
 `json object` response will look like the following:
 
@@ -71,4 +73,4 @@ The API will output all the detections with the corresponding bounding boxes and
 }
 ````
 
-*Note: If `DEBUG` flag is set to `True` in the `app.py`, images will be produced in the `debug` directory to make debug a bit easier.*
+*Note: If `DEBUG` flag is set to `True` in the `app.py`, images will be produced in the `debug` directory to make debugging a bit easier.*
