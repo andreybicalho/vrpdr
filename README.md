@@ -4,7 +4,7 @@
 
 # What's this repo about?
 
-This is a simple approach for vehicle registration plate detection and recognition. It is not an end-to-end system, instead, two different deep learning methods were stacked together to complete this task. `You Only Look Once` ([*YOLO*](https://github.com/AlexeyAB/darknet)) object detection algorithm was used to detect license plate regions, then an `Attention Based Optical Character Recognition`, [*Attention-OCR*](https://github.com/wptoux/attention-ocr), was applied to recognize the characters.
+This is a simple approach for handling the problem of vehicle license plate recognition. It is not an end-to-end system, instead, two different deep learning algorithms were stacked together to complete this task. First, license plates regions were extracted by using the [*YOLO*](https://github.com/AlexeyAB/darknet) object detection algorithm, then the region proposals were submitted to an `Attention Based Optical Character Recognition`, [*Attention-OCR*](https://github.com/wptoux/attention-ocr), to finally recognize the characters.
 
 ![](docs/example.gif)
 
@@ -21,9 +21,7 @@ Both *YOLO* and *Attention-OCR* were trained on the Brazilian [SSIG-ALPR](http:/
 * Images were resized to 1056x576 during training, so YOLO will perform best if applied to this shape.
 * Cropped bounding box images (i.e. license plates) were resized to 160x60 to train the Attention-OCR.
 
-Download the pretrained models and put it in the `config` directory. 
-
-* `TODO:` upload weights and other config files somewhere.
+[Download](https://drive.google.com/drive/folders/1Ug2UpsQ7tfcDVIW6P3UQ3uUfUnNmNLy-?usp=sharing) the pretrained models as well as the configuration files and put them in the `config` directory. 
 
 Run the application service:
 ````

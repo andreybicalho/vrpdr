@@ -12,7 +12,7 @@ ROOT_IMG_PATH = 'ssigalpr_samples/val/'
 ANNOTADED_FILE = 'ssigalpr_samples/val.csv'
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Usage: python export_to_mobile.py --in=chkpoint/time_2020-06-12_19-31-05_epoch_10.pth --out=exported_model.pth')
+    parser = argparse.ArgumentParser(description='Usage: python export_to_mobile.py --m=chkpoint/time_2020-06-12_19-31-05_epoch_10.pth --out=exported_model.pth')
     parser.add_argument('--m', help='input model filename.')
     parser.add_argument('--out', help='output model filename.')
     parser.add_argument('--w', type=int, nargs='?', const=160, default=160, help='image width that the model was trained on.')
